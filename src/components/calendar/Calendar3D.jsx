@@ -1193,7 +1193,7 @@ export default function Calendar3D({ tokens, isMobile = false, isTablet = false,
 
         {/* Dropdown Panel - expands downward from button */}
         {showHolidaysPanel && (
-          isMobile ? (
+          (isMobile || isTablet) ? (
             <Html fullscreen style={{ pointerEvents: 'auto' }}>
               <div
                 onClick={() => setShowHolidaysPanel(false)}
