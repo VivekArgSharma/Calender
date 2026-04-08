@@ -116,7 +116,7 @@ select {
   border-color: transparent;
 }
 
-@media (max-width: 780px) {
+@media (max-width: 1100px) {
   .app-shell {
     background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), transparent 34%), #131313;
   }

@@ -11,7 +11,7 @@ function AppShell() {
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 820px), (pointer: coarse)')
+    const media = window.matchMedia('(max-width: 1100px), (pointer: coarse)')
     const sync = () => setIsMobile(media.matches)
     sync()
 

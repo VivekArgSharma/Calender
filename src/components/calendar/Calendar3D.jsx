@@ -542,7 +542,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
   }, [currentDate, displayedMonthOffset])
 
   const calendarMeshRef = useRef()
-  const { raycaster, camera } = useThree()
+  const { raycaster, camera, gl, size } = useThree()
 
   useEffect(() => {
     saveEvents(eventsArr)
@@ -557,6 +557,24 @@ export default function Calendar3D({ tokens, isMobile = false }) {
       clearTimeout(longPressRef.current)
     }
   }, [])
+
+  const findAnnotationForDate = useCallback((clickedDate) => {
+    for (const ann of annotations) {
+      const startD = new Date(ann.start)
+      if (ann.type === 'single') {
+        if (isSameDay(clickedDate, startD)) return ann
+      } else if (ann.type === 'range' && ann.end) {
+        const endD = new Date(ann.end)
+        const minDate = isAfter(startD, endD) ? endD : startD
+        const maxDate = isAfter(startD, endD) ? startD : endD
+        if (isSameDay(clickedDate, minDate) || isSameDay(clickedDate, maxDate) || (clickedDate > minDate && clickedDate < maxDate)) {
+          return ann
+        }
+      }
+    }
+
+    return null
+  }, [annotations])
 
   const [heroImage, setHeroImage] = useState(null)
   useEffect(() => {
@@ -614,6 +632,14 @@ export default function Calendar3D({ tokens, isMobile = false }) {
   const handleDaySelection = useCallback((dayInfo) => {
     if (!dayInfo) return
 
+    if (isMobile && dayInfo.isCurrentMonth) {
+      const existingAnnotation = findAnnotationForDate(dayInfo.date)
+      if (existingAnnotation) {
+        setActiveNoteId(existingAnnotation.id)
+        return
+      }
+    }
+
     if (dayInfo.isPrevMonth) {
       handleFlip(-1)
       setTimeout(() => setActiveDay(dayInfo.dayNum), 100)
@@ -623,26 +649,12 @@ export default function Calendar3D({ tokens, isMobile = false }) {
     } else {
       setActiveDay(dayInfo.dayNum)
     }
-  }, [handleFlip])
+  }, [findAnnotationForDate, handleFlip, isMobile])
 
   const handleDayAnnotation = useCallback((clickedDate) => {
     const clickedStr = format(clickedDate, 'yyyy-MM-dd')
 
-    let foundAnn = null
-    for (const ann of annotations) {
-      const startD = new Date(ann.start)
-      if (ann.type === 'single') {
-        if (isSameDay(clickedDate, startD)) foundAnn = ann
-      } else if (ann.type === 'range' && ann.end) {
-        const endD = new Date(ann.end)
-        const minDate = isAfter(startD, endD) ? endD : startD
-        const maxDate = isAfter(startD, endD) ? startD : endD
-        if (isSameDay(clickedDate, minDate) || isSameDay(clickedDate, maxDate) || (clickedDate > minDate && clickedDate < maxDate)) {
-          foundAnn = ann
-        }
-      }
-      if (foundAnn) break
-    }
+    const foundAnn = findAnnotationForDate(clickedDate)
 
     if (foundAnn) {
       setActiveNoteId(foundAnn.id)
@@ -678,7 +690,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
       text: ''
     }])
     setActiveNoteId(newId)
-  }, [annotations, draftRangeStart, isRangeSelectionMode])
+  }, [draftRangeStart, findAnnotationForDate, isRangeSelectionMode])
 
   const handleCalendarClick = useCallback((e) => {
     e.stopPropagation()
@@ -738,13 +750,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
     }
 
     clearLongPress()
-    if (dayInfo && dayInfo.isCurrentMonth) {
-      longPressRef.current = setTimeout(() => {
-        gestureRef.current.longPressTriggered = true
-        handleDayAnnotation(dayInfo.date)
-      }, 420)
-    }
-  }, [clearLongPress, currentDate, handleDayAnnotation, isMobile])
+  }, [clearLongPress, currentDate, isMobile])
 
   const handleCalendarPointerUp = useCallback((e) => {
     if (!isMobile) return
@@ -788,6 +794,59 @@ export default function Calendar3D({ tokens, isMobile = false }) {
     setHoveredDay(null)
     clearLongPress()
   }, [clearLongPress])
+
+  const getDayInfoFromClientPoint = useCallback((clientX, clientY) => {
+    if (!calendarMeshRef.current) return null
+
+    const x = (clientX / size.width) * 2 - 1
+    const y = -(clientY / size.height) * 2 + 1
+    raycaster.setFromCamera({ x, y }, camera)
+    const hits = raycaster.intersectObject(calendarMeshRef.current, false)
+    if (!hits.length || !hits[0].uv) return null
+    return getDayFromUV(hits[0].uv, currentDate)
+  }, [camera, currentDate, raycaster, size.height, size.width])
+
+  useEffect(() => {
+    if (!isMobile) return undefined
+
+    const element = gl.domElement
+    const swipe = {
+      startX: 0,
+      startY: 0,
+      active: false,
+    }
+
+    const onTouchStart = (event) => {
+      if (event.target.closest('textarea, button, input, select')) return
+      const touch = event.touches[0]
+      if (!touch) return
+      swipe.startX = touch.clientX
+      swipe.startY = touch.clientY
+      swipe.active = true
+    }
+
+    const onTouchEnd = (event) => {
+      if (!swipe.active || isFlippingRef.current) return
+      const touch = event.changedTouches[0]
+      if (!touch) return
+      const deltaX = touch.clientX - swipe.startX
+      const deltaY = touch.clientY - swipe.startY
+      swipe.active = false
+
+      if (Math.abs(deltaX) > 54 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+        handleFlip(deltaX < 0 ? 1 : -1)
+        setShowHolidaysPanel(false)
+      }
+    }
+
+    element.addEventListener('touchstart', onTouchStart, { passive: true })
+    element.addEventListener('touchend', onTouchEnd, { passive: true })
+
+    return () => {
+      element.removeEventListener('touchstart', onTouchStart)
+      element.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [gl, handleFlip, isMobile])
 
   const handleCalendarHover = useCallback((e) => {
     if (isMobile) return
@@ -998,24 +1057,96 @@ export default function Calendar3D({ tokens, isMobile = false }) {
 
       {/* Interactive Sticky Note overlay (Visible when selection is complete) */}
       {activeAnnotation && (
-        <group>
-          {/* Note positioned clearly to the right of the calendar to avoid left/right arrows */}
-          <StickyNote3D 
-            text={activeAnnotation.text} 
-            onChange={(val) => setAnnotations(prev => prev.map(a => a.id === activeNoteId ? { ...a, text: val } : a))} 
-            onEnter={() => setActiveNoteId(null)}
-             position={stickyNotePosition}
-             isMobile={isMobile}
-           />
-          {/* Cartoony Arrow connecting sticky note to the selected start date */}
-          {arrowTargetVec && (
-             <CartoonyArrow 
-               startVec={stickyArrowStart} 
-               endVec={arrowTargetVec} 
-               color={activeAnnotation.type === 'single' ? "#ff3b3b" : "#ff8800"}
-             />
-          )}
-        </group>
+        isMobile ? (
+          <Html fullscreen style={{ pointerEvents: 'auto' }}>
+            <div
+              onClick={() => setActiveNoteId(null)}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '20px',
+                background: 'rgba(8, 10, 14, 0.42)',
+                backdropFilter: 'blur(6px)'
+              }}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  width: 'min(86vw, 320px)',
+                  minHeight: '190px',
+                  padding: '16px',
+                  borderRadius: '24px',
+                  background: '#fff5b8',
+                  boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
+                  border: '1px solid rgba(86, 68, 18, 0.18)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+                  <div style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: '14px', color: '#6d5712' }}>
+                    Note
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveNoteId(null)}
+                    style={{
+                      border: 'none',
+                      background: 'rgba(109, 87, 18, 0.12)',
+                      color: '#6d5712',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '999px',
+                      fontSize: '18px',
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      cursor: 'pointer'
+                    }}
+                    aria-label="Close note"
+                  >
+                    x
+                  </button>
+                </div>
+                <textarea
+                  autoFocus
+                  value={activeAnnotation.text}
+                  onChange={(e) => setAnnotations(prev => prev.map(a => a.id === activeNoteId ? { ...a, text: e.target.value } : a))}
+                  placeholder="Write your note..."
+                  style={{
+                    width: '100%',
+                    minHeight: '130px',
+                    border: 'none',
+                    outline: 'none',
+                    resize: 'none',
+                    background: 'transparent',
+                    fontFamily: 'Manrope, sans-serif',
+                    fontSize: '17px',
+                    lineHeight: '1.45',
+                    color: '#2c2720'
+                  }}
+                />
+              </div>
+            </div>
+          </Html>
+        ) : (
+          <group>
+            <StickyNote3D 
+              text={activeAnnotation.text} 
+              onChange={(val) => setAnnotations(prev => prev.map(a => a.id === activeNoteId ? { ...a, text: val } : a))} 
+              onEnter={() => setActiveNoteId(null)}
+              position={stickyNotePosition}
+              isMobile={isMobile}
+            />
+            {arrowTargetVec && (
+              <CartoonyArrow 
+                startVec={stickyArrowStart} 
+                endVec={arrowTargetVec} 
+                color={activeAnnotation.type === 'single' ? "#ff3b3b" : "#ff8800"}
+              />
+            )}
+          </group>
+        )
       )}
 
       {/* Holidays Button + Dropdown - Right side top */}
