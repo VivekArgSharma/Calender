@@ -38,37 +38,41 @@ function SaxStand({ position }) {
   )
 }
 
-function MusicProps() {
+function MusicProps({ isMobile }) {
   return (
     <group>
-      <ModelAsset
-        url="/models/theme3-music/Guitar Amp.glb"
-        targetHeight={1.26}
-        position={[4.2, 0, -1.52]}
-        rotation={[0, -0.38, 0]}
-      />
-      <ModelAsset
-        url="/models/theme3-music/Electric guitar.glb"
-        targetHeight={1.9}
-        position={[4.72, 0, -0.62]}
-        rotation={[0.03, -0.58, -0.14]}
-      />
+      {!isMobile ? (
+        <>
+          <ModelAsset
+            url="/models/theme3-music/Guitar Amp.glb"
+            targetHeight={1.26}
+            position={[4.2, 0, -1.52]}
+            rotation={[0, -0.38, 0]}
+          />
+          <ModelAsset
+            url="/models/theme3-music/Electric guitar.glb"
+            targetHeight={1.9}
+            position={[4.72, 0, -0.62]}
+            rotation={[0.03, -0.58, -0.14]}
+          />
 
-      <MusicStand position={[-4.05, 0, -1.44]} />
-      <ModelAsset
-        url="/models/theme3-music/Midi controller.glb"
-        targetHeight={0.36}
-        position={[-4.05, 1.14, -1.44]}
-        rotation={[0, 0.26, 0]}
-      />
+          <MusicStand position={[-4.05, 0, -1.44]} />
+          <ModelAsset
+            url="/models/theme3-music/Midi controller.glb"
+            targetHeight={0.36}
+            position={[-4.05, 1.14, -1.44]}
+            rotation={[0, 0.26, 0]}
+          />
 
-      <SaxStand position={[-3.2, 0, -0.78]} />
-      <ModelAsset
-        url="/models/theme3-music/Saxophone.glb"
-        targetHeight={1.18}
-        position={[-3.2, 0.96, -0.74]}
-        rotation={[0.16, 0.4, -0.14]}
-      />
+          <SaxStand position={[-3.2, 0, -0.78]} />
+          <ModelAsset
+            url="/models/theme3-music/Saxophone.glb"
+            targetHeight={1.18}
+            position={[-3.2, 0.96, -0.74]}
+            rotation={[0.16, 0.4, -0.14]}
+          />
+        </>
+      ) : null}
 
       <WallFrame
         image="/images/art/music-stage-2k.jpg"
@@ -78,14 +82,16 @@ function MusicProps() {
         frameColor="#261812"
         matColor="#d8c7b6"
       />
-      <WallFrame
-        image="/images/art/music-concert.jpg"
-        position={[-5.15, 2.55, -2.82]}
-        rotation={[0, 0.14, 0]}
-        size={[1.05, 1.4]}
-        frameColor="#1e1410"
-        matColor="#ddccba"
-      />
+      {!isMobile ? (
+        <WallFrame
+          image="/images/art/music-concert.jpg"
+          position={[-5.15, 2.55, -2.82]}
+          rotation={[0, 0.14, 0]}
+          size={[1.05, 1.4]}
+          frameColor="#1e1410"
+          matColor="#ddccba"
+        />
+      ) : null}
       <WallFrame
         image="/images/art/music-crowd-2k.jpg"
         position={[5.55, 4.55, -2.82]}
@@ -94,24 +100,26 @@ function MusicProps() {
         frameColor="#23150f"
         matColor="#ddccba"
       />
-      <WallFrame
-        image="/images/art/music-stage-2k.jpg"
-        position={[4.95, 2.55, -2.82]}
-        rotation={[0, -0.06, 0]}
-        size={[1.0, 1.25]}
-        frameColor="#261812"
-        matColor="#d8c7b6"
-      />
+      {!isMobile ? (
+        <WallFrame
+          image="/images/art/music-stage-2k.jpg"
+          position={[4.95, 2.55, -2.82]}
+          rotation={[0, -0.06, 0]}
+          size={[1.0, 1.25]}
+          frameColor="#261812"
+          matColor="#d8c7b6"
+        />
+      ) : null}
 
-      <Calendar3D tokens={theme3Tokens} />
+      <Calendar3D tokens={theme3Tokens} isMobile={isMobile} />
     </group>
   )
 }
 
-export default function Theme3Scene() {
+export default function Theme3Scene({ isMobile = false }) {
   return (
-    <SceneShell tokens={theme3Tokens}>
-      <MusicProps />
+    <SceneShell tokens={theme3Tokens} isMobile={isMobile}>
+      <MusicProps isMobile={isMobile} />
     </SceneShell>
   )
 }

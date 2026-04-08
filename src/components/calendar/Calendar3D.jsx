@@ -507,7 +507,7 @@ function StickyNote3D({ text, onChange, position, onEnter }) {
   )
 }
 
-export default function Calendar3D({ tokens }) {
+export default function Calendar3D({ tokens, isMobile = false }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [activeDay, setActiveDay] = useState(new Date().getDate())
   const [isFlipping, setIsFlipping] = useState(false)
@@ -525,10 +525,13 @@ export default function Calendar3D({ tokens }) {
   const [draftRangeStart, setDraftRangeStart] = useState(null)
   const [showHolidaysPanel, setShowHolidaysPanel] = useState(false)
   const [displayedMonthOffset, setDisplayedMonthOffset] = useState(0)
+  const gestureRef = useRef({ startX: 0, startY: 0, startTime: 0, dayInfo: null, longPressTriggered: false })
+  const longPressRef = useRef(null)
 
   const currentMonthHolidays = useMemo(() => {
-    return getHolidaysForMonth(currentDate.getMonth() + 1, currentDate.getFullYear(), indianHolidays2026)
-  }, [currentDate])
+    const visibleDate = addMonths(currentDate, displayedMonthOffset)
+    return getHolidaysForMonth(visibleDate.getMonth() + 1, visibleDate.getFullYear(), indianHolidays2026)
+  }, [currentDate, displayedMonthOffset])
 
   const calendarMeshRef = useRef()
   const { raycaster, camera } = useThree()
@@ -540,6 +543,12 @@ export default function Calendar3D({ tokens }) {
   useEffect(() => {
     saveAnnotations(annotations)
   }, [annotations])
+
+  useEffect(() => () => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current)
+    }
+  }, [])
 
   const [heroImage, setHeroImage] = useState(null)
   useEffect(() => {
@@ -594,24 +603,7 @@ export default function Calendar3D({ tokens }) {
     requestAnimationFrame(animate)
   }, [])
 
-  const handleCalendarClick = useCallback((e) => {
-    e.stopPropagation()
-
-    if (activeNoteId) {
-      setActiveNoteId(null)
-    }
-
-    if (isRangeSelectionMode) return // In selection mode, ignore single clicks
-
-    // Close holidays panel when clicking elsewhere
-    if (showHolidaysPanel) {
-      setShowHolidaysPanel(false)
-    }
-
-    const uv = e.uv
-    if (!uv) return
-
-    const dayInfo = getDayFromUV(uv, currentDate)
+  const handleDaySelection = useCallback((dayInfo) => {
     if (!dayInfo) return
 
     if (dayInfo.isPrevMonth) {
@@ -623,21 +615,11 @@ export default function Calendar3D({ tokens }) {
     } else {
       setActiveDay(dayInfo.dayNum)
     }
-  }, [currentDate, handleFlip, isRangeSelectionMode, activeNoteId, showHolidaysPanel])
+  }, [handleFlip])
 
-  const handleCalendarDoubleClick = useCallback((e) => {
-    e.stopPropagation()
-
-    const uv = e.uv
-    if (!uv) return
-
-    const dayInfo = getDayFromUV(uv, currentDate)
-    if (!dayInfo) return
-
-    const clickedDate = dayInfo.date
+  const handleDayAnnotation = useCallback((clickedDate) => {
     const clickedStr = format(clickedDate, 'yyyy-MM-dd')
 
-    // 1. Check if we clicked on an EXISTING annotation
     let foundAnn = null
     for (const ann of annotations) {
       const startD = new Date(ann.start)
@@ -661,7 +643,6 @@ export default function Calendar3D({ tokens }) {
       return
     }
 
-    // 2. Draft Range process
     if (isRangeSelectionMode) {
       if (!draftRangeStart) {
         setDraftRangeStart(clickedStr)
@@ -681,7 +662,6 @@ export default function Calendar3D({ tokens }) {
       return
     }
 
-    // 3. New Single Circle
     const newId = 'single-' + Date.now()
     setAnnotations(prev => [...prev, {
       id: newId,
@@ -690,8 +670,106 @@ export default function Calendar3D({ tokens }) {
       text: ''
     }])
     setActiveNoteId(newId)
+  }, [annotations, draftRangeStart, isRangeSelectionMode])
 
-  }, [annotations, isRangeSelectionMode, draftRangeStart, currentDate])
+  const handleCalendarClick = useCallback((e) => {
+    e.stopPropagation()
+
+    if (activeNoteId) {
+      setActiveNoteId(null)
+    }
+
+    if (isRangeSelectionMode) return // In selection mode, ignore single clicks
+
+    // Close holidays panel when clicking elsewhere
+    if (showHolidaysPanel) {
+      setShowHolidaysPanel(false)
+    }
+
+    const uv = e.uv
+    if (!uv) return
+
+    const dayInfo = getDayFromUV(uv, currentDate)
+    if (!dayInfo) return
+
+    handleDaySelection(dayInfo)
+  }, [currentDate, handleDaySelection, isRangeSelectionMode, activeNoteId, showHolidaysPanel])
+
+  const handleCalendarDoubleClick = useCallback((e) => {
+    e.stopPropagation()
+
+    const uv = e.uv
+    if (!uv) return
+
+    const dayInfo = getDayFromUV(uv, currentDate)
+    if (!dayInfo) return
+
+    handleDayAnnotation(dayInfo.date)
+  }, [currentDate, handleDayAnnotation])
+
+  const clearLongPress = useCallback(() => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current)
+      longPressRef.current = null
+    }
+  }, [])
+
+  const handleCalendarPointerDown = useCallback((e) => {
+    if (!isMobile) return
+
+    const uv = e.uv
+    if (!uv) return
+
+    const dayInfo = getDayFromUV(uv, currentDate)
+    gestureRef.current = {
+      startX: uv.x,
+      startY: uv.y,
+      startTime: Date.now(),
+      dayInfo,
+      longPressTriggered: false,
+    }
+
+    clearLongPress()
+    if (dayInfo && dayInfo.isCurrentMonth) {
+      longPressRef.current = setTimeout(() => {
+        gestureRef.current.longPressTriggered = true
+        handleDayAnnotation(dayInfo.date)
+      }, 420)
+    }
+  }, [clearLongPress, currentDate, handleDayAnnotation, isMobile])
+
+  const handleCalendarPointerUp = useCallback((e) => {
+    if (!isMobile) return
+
+    const uv = e.uv
+    const gesture = gestureRef.current
+    clearLongPress()
+    if (!uv || !gesture.dayInfo) return
+
+    const deltaX = uv.x - gesture.startX
+    const deltaY = uv.y - gesture.startY
+    const absX = Math.abs(deltaX)
+    const absY = Math.abs(deltaY)
+
+    if (absX > 0.12 && absX > absY) {
+      handleFlip(deltaX < 0 ? 1 : -1)
+      return
+    }
+
+    if (gesture.longPressTriggered) return
+
+    if (isRangeSelectionMode) {
+      handleDayAnnotation(gesture.dayInfo.date)
+      return
+    }
+
+    handleDaySelection(gesture.dayInfo)
+  }, [clearLongPress, handleDayAnnotation, handleDaySelection, handleFlip, isMobile, isRangeSelectionMode])
+
+  const handleCalendarPointerLeave = useCallback(() => {
+    setHoveredDay(null)
+    clearLongPress()
+  }, [clearLongPress])
 
   const handleCalendarHover = useCallback((e) => {
     e.stopPropagation()
@@ -731,11 +809,18 @@ export default function Calendar3D({ tokens }) {
     }
   }, [activeAnnotation, currentDate])
 
+  const navOffsetX = isMobile ? CALENDAR_WIDTH / 2 + 0.3 : CALENDAR_WIDTH / 2 + 0.65
+  const navSize = isMobile ? 0.9 : 0.7
+  const actionButtonPos = isMobile ? [-1.05, 2.75, 1.0] : [-CALENDAR_WIDTH / 2 - 1.2, 1.6, 1.0]
+  const holidaysButtonPos = isMobile ? [1.05, 2.75, 1.0] : [CALENDAR_WIDTH / 2 + 1.6, 1.6, 1.0]
+  const stickyNotePosition = isMobile ? [0, -3.35, 0.8] : [CALENDAR_WIDTH / 2 + 2.0, 0, 0.5]
+  const stickyArrowStart = isMobile ? new THREE.Vector3(0, -2.55, 0.8) : new THREE.Vector3(CALENDAR_WIDTH / 2 + 2.0 - 0.75, 0, 0.5)
+
   return (
     <group position={[0, 3.18, 0.5]}>
       {/* Navigation buttons - visible with background */}
       {/* Right arrow button (next month) */}
-      <group position={[CALENDAR_WIDTH / 2 + 0.65, 0, 1.2]}>
+      <group position={[navOffsetX, 0, 1.2]}>
         <mesh
           onClick={(e) => {
             e.stopPropagation();
@@ -743,7 +828,7 @@ export default function Calendar3D({ tokens }) {
           }}
           renderOrder={999}
         >
-          <planeGeometry args={[0.7, 0.7]} />
+          <planeGeometry args={[navSize, navSize]} />
           <meshStandardMaterial color={tokens.calendarAccent || '#4b78b6'} roughness={0.5} metalness={0.1} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
         {/* Arrow triangle right - rotate to point right */}
@@ -754,7 +839,7 @@ export default function Calendar3D({ tokens }) {
       </group>
 
       {/* Left arrow button (prev month) */}
-      <group position={[-CALENDAR_WIDTH / 2 - 0.65, 0, 1.2]}>
+      <group position={[-navOffsetX, 0, 1.2]}>
         <mesh
           onClick={(e) => {
             e.stopPropagation();
@@ -762,7 +847,7 @@ export default function Calendar3D({ tokens }) {
           }}
           renderOrder={999}
         >
-          <planeGeometry args={[0.7, 0.7]} />
+          <planeGeometry args={[navSize, navSize]} />
           <meshStandardMaterial color={tokens.calendarAccent || '#4b78b6'} roughness={0.5} metalness={0.1} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
         {/* Arrow triangle left - rotate to point left */}
@@ -801,9 +886,12 @@ export default function Calendar3D({ tokens }) {
         ref={calendarMeshRef}
         position={[0, 0, 0.02]}
         renderOrder={101}
-        onClick={handleCalendarClick}
-        onDoubleClick={handleCalendarDoubleClick}
+        onClick={isMobile ? undefined : handleCalendarClick}
+        onDoubleClick={isMobile ? undefined : handleCalendarDoubleClick}
         onPointerMove={handleCalendarHover}
+        onPointerDown={handleCalendarPointerDown}
+        onPointerUp={handleCalendarPointerUp}
+        onPointerLeave={handleCalendarPointerLeave}
       >
         <planeGeometry args={[CALENDAR_WIDTH, CALENDAR_HEIGHT]} />
         <meshStandardMaterial 
@@ -821,7 +909,7 @@ export default function Calendar3D({ tokens }) {
       </mesh>
 
       {/* Primary Action Button - Left side top */}
-      <group position={[-CALENDAR_WIDTH / 2 - 1.2, 1.6, 1.0]}>
+      <group position={actionButtonPos}>
         <mesh
           onClick={(e) => {
             e.stopPropagation()
@@ -838,7 +926,7 @@ export default function Calendar3D({ tokens }) {
           }}
           renderOrder={1002}
         >
-          <boxGeometry args={[2.0, 0.55, 0.05]} />
+          <boxGeometry args={[isMobile ? 1.75 : 2.0, isMobile ? 0.48 : 0.55, 0.05]} />
           <meshStandardMaterial 
             color={activeNoteId ? '#f44336' : (isRangeSelectionMode ? '#527bb4' : (tokens.chipColor || tokens.calendarAccent || '#4b78b6'))} 
             roughness={0.5} 
@@ -848,17 +936,17 @@ export default function Calendar3D({ tokens }) {
           <div style={{
             color: '#fff',
             fontFamily: 'Manrope, sans-serif',
-            fontSize: '18px',
+            fontSize: isMobile ? '14px' : '18px',
             fontWeight: 'bold',
             textAlign: 'center',
-            width: '220px',
+            width: isMobile ? '170px' : '220px',
             userSelect: 'none',
             textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
           }}>
             {activeNoteId ? 'Delete Note' : 
-             !isRangeSelectionMode ? 'Select Dates Range' : 
-             !draftRangeStart ? 'Double click start date' : 
-             'Double click end date'}
+             !isRangeSelectionMode ? 'Range' : 
+             !draftRangeStart ? (isMobile ? 'Tap start date' : 'Double click start date') : 
+             (isMobile ? 'Tap end date' : 'Double click end date')}
           </div>
         </Html>
       </group>
@@ -871,12 +959,12 @@ export default function Calendar3D({ tokens }) {
             text={activeAnnotation.text} 
             onChange={(val) => setAnnotations(prev => prev.map(a => a.id === activeNoteId ? { ...a, text: val } : a))} 
             onEnter={() => setActiveNoteId(null)}
-            position={[CALENDAR_WIDTH / 2 + 2.0, 0, 0.5]} 
-          />
+             position={stickyNotePosition} 
+           />
           {/* Cartoony Arrow connecting sticky note to the selected start date */}
           {arrowTargetVec && (
              <CartoonyArrow 
-               startVec={new THREE.Vector3(CALENDAR_WIDTH / 2 + 2.0 - 0.75, 0, 0.5)} 
+               startVec={stickyArrowStart} 
                endVec={arrowTargetVec} 
                color={activeAnnotation.type === 'single' ? "#ff3b3b" : "#ff8800"}
              />
@@ -885,7 +973,7 @@ export default function Calendar3D({ tokens }) {
       )}
 
       {/* Holidays Button + Dropdown - Right side top */}
-      <group position={[CALENDAR_WIDTH / 2 + 1.6, 1.6, 1.0]}>
+      <group position={holidaysButtonPos}>
         <mesh
           onClick={(e) => {
             e.stopPropagation()
@@ -893,7 +981,7 @@ export default function Calendar3D({ tokens }) {
           }}
           renderOrder={1003}
         >
-          <boxGeometry args={[1.6, 0.55, 0.05]} />
+          <boxGeometry args={[isMobile ? 1.45 : 1.6, isMobile ? 0.48 : 0.55, 0.05]} />
           <meshStandardMaterial 
             color={showHolidaysPanel ? (tokens.calendarAccent || '#4b78b6') : (tokens.chipColor || tokens.calendarAccent || '#4b78b6')} 
             roughness={0.5} 
@@ -903,10 +991,10 @@ export default function Calendar3D({ tokens }) {
           <div style={{
             color: '#fff',
             fontFamily: 'Manrope, sans-serif',
-            fontSize: '18px',
+            fontSize: isMobile ? '14px' : '18px',
             fontWeight: 'bold',
             textAlign: 'center',
-            width: '180px',
+            width: isMobile ? '150px' : '180px',
             userSelect: 'none',
             textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
           }}>
@@ -916,33 +1004,33 @@ export default function Calendar3D({ tokens }) {
 
         {/* Dropdown Panel - expands downward from button */}
         {showHolidaysPanel && (
-          <group position={[0, -1.6, 0.05]}>
+          <group position={[0, isMobile ? -1.3 : -1.6, 0.05]}>
             <mesh>
-              <planeGeometry args={[2.4, 2.2]} />
+              <planeGeometry args={[isMobile ? 1.95 : 2.4, isMobile ? 1.8 : 2.2]} />
               <meshStandardMaterial color={tokens.calendarBg || '#1a212c'} roughness={0.9} transparent opacity={0.95} />
             </mesh>
-            <Html transform position={[0, 0, 0.01]} distanceFactor={1.5} style={{ width: '260px', pointerEvents: 'none' }}>
+            <Html transform position={[0, 0, 0.01]} distanceFactor={1.5} style={{ width: isMobile ? '210px' : '260px', pointerEvents: 'none' }}>
               <div style={{
-                padding: '20px',
+                padding: isMobile ? '14px' : '20px',
                 fontFamily: 'Manrope, sans-serif',
                 color: tokens.calendarText || '#ebf2fb',
-                fontSize: '22px',
+                fontSize: isMobile ? '16px' : '22px',
                 lineHeight: '1.5'
               }}>
-                <div style={{ fontWeight: 'bold', fontSize: '26px', marginBottom: '16px', borderBottom: `3px solid ${tokens.calendarAccent}`, paddingBottom: '8px' }}>
+                <div style={{ fontWeight: 'bold', fontSize: isMobile ? '18px' : '26px', marginBottom: '16px', borderBottom: `3px solid ${tokens.calendarAccent}`, paddingBottom: '8px' }}>
                   Holidays
                 </div>
                 {currentMonthHolidays.length === 0 ? (
-                  <div style={{ opacity: 0.6, fontStyle: 'italic', fontSize: '20px' }}>No holidays this month</div>
+                  <div style={{ opacity: 0.6, fontStyle: 'italic', fontSize: isMobile ? '14px' : '20px' }}>No holidays this month</div>
                 ) : (
                   currentMonthHolidays.map((h, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
-                      <span style={{ color: '#ff4444', fontWeight: '900', fontSize: '26px' }}>{h.date.getDate()}</span>
-                      <span style={{ flex: 1, marginLeft: '14px', fontSize: '22px', fontWeight: '600' }}>{h.name}</span>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isMobile ? '8px' : '12px', alignItems: 'center' }}>
+                      <span style={{ color: '#ff4444', fontWeight: '900', fontSize: isMobile ? '18px' : '26px' }}>{h.date.getDate()}</span>
+                      <span style={{ flex: 1, marginLeft: '14px', fontSize: isMobile ? '14px' : '22px', fontWeight: '600' }}>{h.name}</span>
                     </div>
                   ))
                 )}
-                <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.3)', fontSize: '16px', opacity: 0.85 }}>
+                <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.3)', fontSize: isMobile ? '12px' : '16px', opacity: 0.85 }}>
                   ★ National Holiday<br/>
                   ✦ Sunday
                 </div>

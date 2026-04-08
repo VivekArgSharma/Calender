@@ -18,6 +18,7 @@ body,
 
 body {
   min-height: 100vh;
+  overscroll-behavior: none;
 }
 
 button,
@@ -37,6 +38,7 @@ select {
 .scene-canvas {
   position: fixed !important;
   inset: 0;
+  touch-action: none;
 }
 
 .ui-shell {
@@ -115,22 +117,38 @@ select {
 }
 
 @media (max-width: 780px) {
+  .app-shell {
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.12), transparent 34%), #131313;
+  }
+
   .ui-shell {
-    padding: 18px;
+    padding: 14px;
+    justify-content: center;
+    align-items: flex-end;
   }
 
   .theme-picker-wrap {
-    width: 100%;
+    width: auto;
   }
 
   .theme-picker-button {
-    width: 100%;
+    min-width: 132px;
+    padding: 14px 18px;
+    font-size: 15px;
+    font-weight: 700;
   }
 
   .theme-picker-modal {
-    right: 18px;
-    bottom: 78px;
-    width: calc(100vw - 36px);
-    max-height: calc(100vh - 108px);
+    right: 50%;
+    transform: translateX(50%);
+    bottom: 82px;
+    width: min(320px, calc(100vw - 28px));
+    max-height: min(52vh, 360px);
+    border-radius: 20px;
+  }
+
+  .theme-option {
+    padding: 14px 16px;
+    font-size: 15px;
   }
 }

@@ -8,7 +8,7 @@ const defaultConfig = {
   drift: { x: 0.18, y: 0.12 },
 }
 
-export default function CameraRig({ config = defaultConfig }) {
+export default function CameraRig({ config = defaultConfig, isMobile = false }) {
   const { camera, pointer } = useThree()
 
   const state = useMemo(
@@ -32,16 +32,17 @@ export default function CameraRig({ config = defaultConfig }) {
 
   useFrame((_, delta) => {
     const { position, lookAt, drift = defaultConfig.drift } = config
+    const driftScale = isMobile ? 0.35 : 1
 
     state.targetPosition.set(
-      position[0] + pointer.x * drift.x,
-      position[1] + pointer.y * drift.y,
+      position[0] + pointer.x * drift.x * driftScale,
+      position[1] + pointer.y * drift.y * driftScale,
       position[2],
     )
 
     state.lookTarget.set(
-      lookAt[0] + pointer.x * drift.x * 0.45,
-      lookAt[1] + pointer.y * drift.y * 0.35,
+      lookAt[0] + pointer.x * drift.x * 0.45 * driftScale,
+      lookAt[1] + pointer.y * drift.y * 0.35 * driftScale,
       lookAt[2],
     )
 
