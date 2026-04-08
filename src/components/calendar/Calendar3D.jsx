@@ -84,7 +84,7 @@ function drawHeroBorder(ctx, width, height, themeId) {
   ctx.stroke()
 }
 
-function createCalendarTexture(date, tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage) {
+function createCalendarTexture(date, tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, hoveredDay) {
   const canvas = document.createElement('canvas')
   canvas.width = 1024
   canvas.height = 1312
@@ -152,6 +152,7 @@ function createCalendarTexture(date, tokens, activeDay, eventsArr, annotations, 
     const isSundayDate = isSunday(day)
     const holidayInfo = isHoliday(day, indianHolidays2026)
     const isHolidayDate = !!holidayInfo
+    const isHovered = hoveredDay && isSameDay(day, hoveredDay.date) && isSameMonth(day, date)
 
     if (!isCurrentMonth) {
       ctx.globalAlpha = 0.3
@@ -189,6 +190,13 @@ function createCalendarTexture(date, tokens, activeDay, eventsArr, annotations, 
     if (isRangeInterval) {
       ctx.fillStyle = tokens.calendarRange || 'rgba(142, 201, 255, 0.25)'
       ctx.fillRect(x - colWidth / 2, y - rowHeight / 2, colWidth, rowHeight)
+    }
+
+    if (isHovered && !isActiveDay && !isSelectedRange && !isRangeInterval && !isTodayDate) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'
+      ctx.beginPath()
+      ctx.arc(x, y - 8, 22, 0, Math.PI * 2)
+      ctx.fill()
     }
 
     if (isSelectedRange) {
@@ -407,10 +415,12 @@ function getGridPosFromDate(date, currentDate) {
   const col = index % 7
   const row = Math.floor(index / 7)
 
-  const x = -CALENDAR_WIDTH / 2 + (col + 0.5) * (CALENDAR_WIDTH / 7)
-  const yTop = 2.1 - (200 / 1312 * 4.2)
-  const yRowHeight = (1112 / 1312 * 4.2) / 6
-  const y = yTop - (row + 0.5) * yRowHeight
+  const colWidth = 1024 / 7
+  const yStart = 660
+  const rowHeight = (1312 - 660) / 6
+
+  const x = -CALENDAR_WIDTH / 2 + (col * colWidth + colWidth / 2) / 1024 * CALENDAR_WIDTH
+  const y = (CALENDAR_HEIGHT / 2) - (yStart + row * rowHeight + rowHeight / 2) / 1312 * CALENDAR_HEIGHT
 
   return new THREE.Vector3(x, y, 0.05)
 }
@@ -540,15 +550,15 @@ export default function Calendar3D({ tokens }) {
   }, [tokens.heroImage])
 
   const calendarTexture = useMemo(() => {
-    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset), tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage)
-  }, [currentDate, tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset])
+    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset), tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, hoveredDay)
+  }, [currentDate, tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset, hoveredDay])
 
   const nextMonthTexture = useMemo(() => {
-    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset + 1), tokens, 0, eventsArr, annotations, draftRangeStart, heroImage)
+    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset + 1), tokens, 0, eventsArr, annotations, draftRangeStart, heroImage, null)
   }, [currentDate, tokens, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset])
 
   const prevMonthTexture = useMemo(() => {
-    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset - 1), tokens, 0, eventsArr, annotations, draftRangeStart, heroImage)
+    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset - 1), tokens, 0, eventsArr, annotations, draftRangeStart, heroImage, null)
   }, [currentDate, tokens, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset])
 
   const handleFlip = useCallback((direction) => {

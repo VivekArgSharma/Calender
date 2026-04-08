@@ -1,10 +1,25 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { createContext, useContext, useMemo, useState, useEffect } from 'react'
 import { themes, themeOrder } from './themes'
+
+const THEME_STORAGE_KEY = 'calendar-theme'
 
 const ThemeContext = createContext(null)
 
 export function ThemeProvider({ children }) {
-  const [activeTheme, setActiveTheme] = useState(themeOrder[0])
+  const [activeTheme, setActiveTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY)
+      return saved && themes[saved] ? saved : themeOrder[0]
+    } catch {
+      return themeOrder[0]
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, activeTheme)
+    } catch {}
+  }, [activeTheme])
 
   const value = useMemo(
     () => ({
