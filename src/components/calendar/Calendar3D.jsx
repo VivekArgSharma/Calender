@@ -1239,28 +1239,34 @@ export default function Calendar3D({ tokens, isMobile = false, isTablet = false,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '20px',
-              background: 'rgba(8, 10, 14, 0.38)',
+              padding: isTablet ? '28px' : '14px',
+              background: 'rgba(6, 8, 12, 0.56)',
               backdropFilter: 'blur(6px)',
             }}
           >
             <div
               onClick={(e) => e.stopPropagation()}
               style={{
-                width: isTabletLandscape ? 'min(40vw, 400px)' : isTablet ? 'min(58vw, 420px)' : 'min(86vw, 340px)',
-                maxHeight: isTablet ? 'min(62vh, 520px)' : 'min(68vh, 460px)',
+                width: isTabletLandscape ? 'min(42vw, 430px)' : isTablet ? 'min(64vw, 460px)' : 'min(94vw, 380px)',
+                maxHeight: isTablet ? 'min(68vh, 560px)' : 'min(78vh, 620px)',
                 overflow: 'auto',
-                padding: isTablet ? '18px' : '16px',
-                borderRadius: '24px',
-                background: tokens.calendarBg || '#1a212c',
+                padding: isTablet ? '22px' : '18px',
+                borderRadius: isTablet ? '28px' : '24px',
+                background: `linear-gradient(180deg, ${tokens.calendarBg || '#1a212c'} 0%, rgba(12,16,24,0.98) 100%)`,
                 border: `1px solid ${tokens.cardBorder || 'rgba(255,255,255,0.18)'}`,
                 color: tokens.calendarText || '#ebf2fb',
                 fontFamily: 'Manrope, sans-serif',
-                boxShadow: '0 24px 70px rgba(0,0,0,0.3)'
+                boxShadow: '0 30px 80px rgba(0,0,0,0.38)',
+                boxSizing: 'border-box'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '14px', paddingBottom: '10px', borderBottom: `2px solid ${tokens.calendarAccent}` }}>
-                <div style={{ fontWeight: '800', fontSize: isTablet ? '20px' : '18px' }}>Holidays</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px', paddingBottom: '12px', borderBottom: `2px solid ${tokens.calendarAccent}` }}>
+                <div>
+                  <div style={{ fontWeight: '900', fontSize: isTablet ? '22px' : '20px', letterSpacing: '0.01em' }}>Holidays</div>
+                  <div style={{ marginTop: '4px', opacity: 0.72, fontSize: isTablet ? '14px' : '13px' }}>
+                    {format(visibleMonthDate, 'MMMM yyyy')}
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => setShowHolidaysPanel(false)}
@@ -1281,18 +1287,57 @@ export default function Calendar3D({ tokens, isMobile = false, isTablet = false,
                 </button>
               </div>
               {currentMonthHolidays.length === 0 ? (
-                <div style={{ opacity: 0.7, fontStyle: 'italic', fontSize: isTablet ? '15px' : '14px' }}>No holidays this month</div>
+                <div style={{ opacity: 0.76, fontStyle: 'italic', fontSize: isTablet ? '16px' : '15px', padding: '10px 2px 4px' }}>No holidays this month</div>
               ) : (
-                currentMonthHolidays.map((h, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
-                    <span style={{ color: '#ff4444', fontWeight: '900', fontSize: isTablet ? '20px' : '18px' }}>{h.date.getDate()}</span>
-                    <span style={{ flex: 1, marginLeft: '14px', fontSize: isTablet ? '15px' : '14px', fontWeight: '600', lineHeight: 1.35 }}>{h.name}</span>
-                  </div>
-                ))
+                <div style={{ display: 'grid', gap: isTablet ? '12px' : '10px' }}>
+                  {currentMonthHolidays.map((h, i) => (
+                    <div key={i} style={{
+                      display: 'grid',
+                      gridTemplateColumns: isTablet ? '62px 1fr' : '56px 1fr',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: isTablet ? '12px 12px' : '10px 10px',
+                      borderRadius: '18px',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.08)'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: isTablet ? '46px' : '42px',
+                        borderRadius: '14px',
+                        background: 'rgba(255,68,68,0.14)',
+                        color: '#ff5a5a',
+                        fontWeight: '900',
+                        fontSize: isTablet ? '20px' : '18px'
+                      }}>
+                        {h.date.getDate()}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: isTablet ? '16px' : '15px', fontWeight: '700', lineHeight: 1.3, wordBreak: 'break-word' }}>{h.name}</div>
+                        <div style={{ marginTop: '4px', fontSize: isTablet ? '13px' : '12px', opacity: 0.72 }}>
+                          {h.type === 'national' ? 'National holiday' : 'Festival'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.18)', fontSize: isTablet ? '13px' : '12px', opacity: 0.85 }}>
-                ★ National Holiday<br/>
-                ✦ Sunday
+              <div style={{
+                marginTop: '18px',
+                paddingTop: '14px',
+                borderTop: '1px solid rgba(255,255,255,0.18)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '10px'
+              }}>
+                <div style={{ padding: '8px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', fontSize: isTablet ? '13px' : '12px', opacity: 0.88 }}>
+                  ★ National Holiday
+                </div>
+                <div style={{ padding: '8px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.06)', fontSize: isTablet ? '13px' : '12px', opacity: 0.88 }}>
+                  Sundays are red on calendar
+                </div>
               </div>
             </div>
           </div>
