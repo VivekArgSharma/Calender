@@ -514,7 +514,7 @@ function StickyNote3D({ text, onChange, position, onEnter, isMobile = false }) {
   )
 }
 
-export default function Calendar3D({ tokens, isMobile = false }) {
+export default function Calendar3D({ tokens, isMobile = false, isTablet = false, isTabletLandscape = false }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [activeDay, setActiveDay] = useState(new Date().getDate())
   const [isFlipping, setIsFlipping] = useState(false)
@@ -874,6 +874,11 @@ export default function Calendar3D({ tokens, isMobile = false }) {
   }, [currentDate, activeDay])
 
   const activeAnnotation = useMemo(() => annotations.find(a => a.id === activeNoteId), [annotations, activeNoteId])
+  const [noteDraft, setNoteDraft] = useState('')
+
+  useEffect(() => {
+    setNoteDraft(activeAnnotation?.text || '')
+  }, [activeAnnotation?.id, activeAnnotation?.text])
 
   const arrowTargetVec = useMemo(() => {
     if (!activeAnnotation) return null
@@ -887,10 +892,10 @@ export default function Calendar3D({ tokens, isMobile = false }) {
     }
   }, [activeAnnotation, currentDate])
 
-  const navOffsetX = isMobile ? CALENDAR_WIDTH / 2 + 0.3 : CALENDAR_WIDTH / 2 + 0.65
-  const navSize = isMobile ? 0.9 : 0.7
-  const actionButtonPos = isMobile ? [-1.05, 2.75, 1.0] : [-CALENDAR_WIDTH / 2 - 1.2, 1.6, 1.0]
-  const holidaysButtonPos = isMobile ? [1.05, 2.75, 1.0] : [CALENDAR_WIDTH / 2 + 1.6, 1.6, 1.0]
+  const navOffsetX = isMobile ? (isTabletLandscape ? CALENDAR_WIDTH / 2 + 0.62 : isTablet ? CALENDAR_WIDTH / 2 + 0.45 : CALENDAR_WIDTH / 2 + 0.3) : CALENDAR_WIDTH / 2 + 0.65
+  const navSize = isMobile ? (isTabletLandscape ? 0.74 : isTablet ? 0.82 : 0.9) : 0.7
+  const actionButtonPos = isMobile ? (isTabletLandscape ? [-1.42, 2.34, 1.0] : isTablet ? [-1.2, 2.55, 1.0] : [-1.05, 2.75, 1.0]) : [-CALENDAR_WIDTH / 2 - 1.2, 1.6, 1.0]
+  const holidaysButtonPos = isMobile ? (isTabletLandscape ? [1.42, 2.34, 1.0] : isTablet ? [1.2, 2.55, 1.0] : [1.05, 2.75, 1.0]) : [CALENDAR_WIDTH / 2 + 1.6, 1.6, 1.0]
   const stickyNotePosition = isMobile ? [0, -3.35, 0.8] : [CALENDAR_WIDTH / 2 + 2.0, 0, 0.5]
   const stickyArrowStart = isMobile ? new THREE.Vector3(0, -2.55, 0.8) : new THREE.Vector3(CALENDAR_WIDTH / 2 + 2.0 - 0.75, 0, 0.5)
   const visibleMonthDate = addMonths(currentDate, displayedMonthOffset)
@@ -938,7 +943,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
 
 
       {/* Stack of remaining pages */}
-      {(isMobile ? [0, -0.005] : [0, -0.005, -0.01]).map((z, i) => (
+      {((isMobile && !isTablet) ? [0, -0.005] : [0, -0.005, -0.01]).map((z, i) => (
         <mesh key={`stack-${i}`} position={[0, 0, z]} renderOrder={100}>
           <planeGeometry args={[CALENDAR_WIDTH, CALENDAR_HEIGHT]} />
           <meshStandardMaterial 
@@ -989,23 +994,23 @@ export default function Calendar3D({ tokens, isMobile = false }) {
       </mesh>
 
       {isMobile ? (
-        <Html transform position={[0, -3.05, 1.05]} distanceFactor={1.55} pointerEvents="none">
+        <Html transform position={[0, isTabletLandscape ? -2.7 : isTablet ? -2.92 : -3.02, 1.05]} distanceFactor={1.55} pointerEvents="none">
           <div style={{
-            width: '240px',
-            padding: '10px 12px',
-            borderRadius: '18px',
+            width: isTabletLandscape ? 'min(34vw, 340px)' : isTablet ? 'min(44vw, 360px)' : 'min(62vw, 300px)',
+            padding: isTabletLandscape ? '10px 14px' : isTablet ? '12px 16px' : '11px 14px',
+            borderRadius: '20px',
             background: 'rgba(18, 22, 28, 0.78)',
             border: `1px solid ${tokens.cardBorder || 'rgba(255,255,255,0.15)'}`,
             color: '#f7f8fb',
             fontFamily: 'Manrope, sans-serif',
             textAlign: 'center',
-            boxShadow: '0 12px 36px rgba(0,0,0,0.22)',
+            boxShadow: '0 16px 40px rgba(0,0,0,0.24)',
             backdropFilter: 'blur(12px)'
           }}>
-            <div style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.01em' }}>
+            <div style={{ fontSize: isTabletLandscape ? '14px' : isTablet ? '15px' : '14px', fontWeight: 800, letterSpacing: '0.01em' }}>
               {format(visibleMonthDate, 'MMMM yyyy')}
             </div>
-            <div style={{ marginTop: '4px', fontSize: '11px', opacity: 0.85, lineHeight: 1.35 }}>
+            <div style={{ marginTop: '4px', fontSize: isTabletLandscape ? '11px' : isTablet ? '12px' : '11px', opacity: 0.88, lineHeight: 1.35 }}>
               Tap to select • Double-tap for note • Swipe to change month
             </div>
           </div>
@@ -1030,7 +1035,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
           }}
           renderOrder={1002}
         >
-          <boxGeometry args={[isMobile ? 1.75 : 2.0, isMobile ? 0.48 : 0.55, 0.05]} />
+          <boxGeometry args={[isMobile ? (isTabletLandscape ? 1.7 : isTablet ? 1.95 : 1.75) : 2.0, isMobile ? (isTabletLandscape ? 0.46 : isTablet ? 0.52 : 0.48) : 0.55, 0.05]} />
           <meshStandardMaterial 
             color={activeNoteId ? '#f44336' : (isRangeSelectionMode ? '#527bb4' : (tokens.chipColor || tokens.calendarAccent || '#4b78b6'))} 
             roughness={0.5} 
@@ -1040,10 +1045,10 @@ export default function Calendar3D({ tokens, isMobile = false }) {
           <div style={{
             color: '#fff',
             fontFamily: 'Manrope, sans-serif',
-            fontSize: isMobile ? '14px' : '18px',
+            fontSize: isMobile ? (isTabletLandscape ? '13px' : isTablet ? '15px' : '14px') : '18px',
             fontWeight: 'bold',
             textAlign: 'center',
-            width: isMobile ? '170px' : '220px',
+            width: isMobile ? (isTabletLandscape ? '172px' : isTablet ? '200px' : '170px') : '220px',
             userSelect: 'none',
             textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
           }}>
@@ -1075,9 +1080,9 @@ export default function Calendar3D({ tokens, isMobile = false }) {
               <div
                 onClick={(e) => e.stopPropagation()}
                 style={{
-                  width: 'min(86vw, 320px)',
-                  minHeight: '190px',
-                  padding: '16px',
+                  width: isTabletLandscape ? 'min(42vw, 420px)' : isTablet ? 'min(60vw, 420px)' : 'min(86vw, 320px)',
+                  minHeight: isTabletLandscape ? '210px' : isTablet ? '220px' : '190px',
+                  padding: isTablet ? '18px' : '16px',
                   borderRadius: '24px',
                   background: '#fff5b8',
                   boxShadow: '0 24px 70px rgba(0,0,0,0.28)',
@@ -1085,7 +1090,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
-                  <div style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: '14px', color: '#6d5712' }}>
+                  <div style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 800, fontSize: isTablet ? '15px' : '14px', color: '#6d5712' }}>
                     Note
                   </div>
                   <button
@@ -1095,8 +1100,8 @@ export default function Calendar3D({ tokens, isMobile = false }) {
                       border: 'none',
                       background: 'rgba(109, 87, 18, 0.12)',
                       color: '#6d5712',
-                      width: '32px',
-                      height: '32px',
+                    width: isTablet ? '36px' : '32px',
+                    height: isTablet ? '36px' : '32px',
                       borderRadius: '999px',
                       fontSize: '18px',
                       fontWeight: 800,
@@ -1105,25 +1110,32 @@ export default function Calendar3D({ tokens, isMobile = false }) {
                     }}
                     aria-label="Close note"
                   >
-                    x
+                    ×
                   </button>
                 </div>
                 <textarea
                   autoFocus
-                  value={activeAnnotation.text}
-                  onChange={(e) => setAnnotations(prev => prev.map(a => a.id === activeNoteId ? { ...a, text: e.target.value } : a))}
+                  value={noteDraft}
+                  onChange={(e) => {
+                    const nextValue = e.target.value
+                    setNoteDraft(nextValue)
+                    setAnnotations(prev => prev.map(a => a.id === activeNoteId ? { ...a, text: nextValue } : a))
+                  }}
                   placeholder="Write your note..."
                   style={{
                     width: '100%',
-                    minHeight: '130px',
+                    minHeight: isTablet ? '154px' : '136px',
                     border: 'none',
                     outline: 'none',
                     resize: 'none',
                     background: 'transparent',
                     fontFamily: 'Manrope, sans-serif',
-                    fontSize: '17px',
+                    fontSize: isTablet ? '18px' : '17px',
+                    fontWeight: '600',
                     lineHeight: '1.45',
-                    color: '#2c2720'
+                    color: '#2c2720',
+                    WebkitTextFillColor: '#2c2720',
+                    caretColor: '#2c2720'
                   }}
                 />
               </div>
@@ -1158,7 +1170,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
           }}
           renderOrder={1003}
         >
-          <boxGeometry args={[isMobile ? 1.45 : 1.6, isMobile ? 0.48 : 0.55, 0.05]} />
+          <boxGeometry args={[isMobile ? (isTabletLandscape ? 1.42 : isTablet ? 1.62 : 1.45) : 1.6, isMobile ? (isTabletLandscape ? 0.46 : isTablet ? 0.52 : 0.48) : 0.55, 0.05]} />
           <meshStandardMaterial 
             color={showHolidaysPanel ? (tokens.calendarAccent || '#4b78b6') : (tokens.chipColor || tokens.calendarAccent || '#4b78b6')} 
             roughness={0.5} 
@@ -1168,10 +1180,10 @@ export default function Calendar3D({ tokens, isMobile = false }) {
           <div style={{
             color: '#fff',
             fontFamily: 'Manrope, sans-serif',
-            fontSize: isMobile ? '14px' : '18px',
+            fontSize: isMobile ? (isTabletLandscape ? '13px' : isTablet ? '15px' : '14px') : '18px',
             fontWeight: 'bold',
             textAlign: 'center',
-            width: isMobile ? '150px' : '180px',
+            width: isMobile ? (isTabletLandscape ? '152px' : isTablet ? '175px' : '150px') : '180px',
             userSelect: 'none',
             textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
           }}>
@@ -1181,39 +1193,109 @@ export default function Calendar3D({ tokens, isMobile = false }) {
 
         {/* Dropdown Panel - expands downward from button */}
         {showHolidaysPanel && (
-          <group position={[0, isMobile ? -1.3 : -1.6, 0.05]}>
-            <mesh>
-              <planeGeometry args={[isMobile ? 1.95 : 2.4, isMobile ? 1.8 : 2.2]} />
-              <meshStandardMaterial color={tokens.calendarBg || '#1a212c'} roughness={0.9} transparent opacity={0.95} />
-            </mesh>
-            <Html transform position={[0, 0, 0.01]} distanceFactor={1.5} style={{ width: isMobile ? '210px' : '260px', pointerEvents: 'none' }}>
-              <div style={{
-                padding: isMobile ? '14px' : '20px',
-                fontFamily: 'Manrope, sans-serif',
-                color: tokens.calendarText || '#ebf2fb',
-                fontSize: isMobile ? '16px' : '22px',
-                lineHeight: '1.5'
-              }}>
-                <div style={{ fontWeight: 'bold', fontSize: isMobile ? '18px' : '26px', marginBottom: '16px', borderBottom: `3px solid ${tokens.calendarAccent}`, paddingBottom: '8px' }}>
-                  Holidays
-                </div>
-                {currentMonthHolidays.length === 0 ? (
-                  <div style={{ opacity: 0.6, fontStyle: 'italic', fontSize: isMobile ? '14px' : '20px' }}>No holidays this month</div>
-                ) : (
-                  currentMonthHolidays.map((h, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: isMobile ? '8px' : '12px', alignItems: 'center' }}>
-                      <span style={{ color: '#ff4444', fontWeight: '900', fontSize: isMobile ? '18px' : '26px' }}>{h.date.getDate()}</span>
-                      <span style={{ flex: 1, marginLeft: '14px', fontSize: isMobile ? '14px' : '22px', fontWeight: '600' }}>{h.name}</span>
-                    </div>
-                  ))
-                )}
-                <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.3)', fontSize: isMobile ? '12px' : '16px', opacity: 0.85 }}>
-                  ★ National Holiday<br/>
-                  ✦ Sunday
+          isMobile ? (
+            <Html fullscreen style={{ pointerEvents: 'auto' }}>
+              <div
+                onClick={() => setShowHolidaysPanel(false)}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '20px',
+                  background: 'rgba(8, 10, 14, 0.38)',
+                  backdropFilter: 'blur(6px)'
+                }}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    width: isTabletLandscape ? 'min(40vw, 400px)' : isTablet ? 'min(58vw, 420px)' : 'min(86vw, 340px)',
+                    maxHeight: isTablet ? 'min(62vh, 520px)' : 'min(68vh, 460px)',
+                    overflow: 'auto',
+                    padding: isTablet ? '18px' : '16px',
+                    borderRadius: '24px',
+                    background: tokens.calendarBg || '#1a212c',
+                    border: `1px solid ${tokens.cardBorder || 'rgba(255,255,255,0.18)'}`,
+                    color: tokens.calendarText || '#ebf2fb',
+                    fontFamily: 'Manrope, sans-serif',
+                    boxShadow: '0 24px 70px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '14px', paddingBottom: '10px', borderBottom: `2px solid ${tokens.calendarAccent}` }}>
+                    <div style={{ fontWeight: '800', fontSize: isTablet ? '20px' : '18px' }}>Holidays</div>
+                    <button
+                      type="button"
+                      onClick={() => setShowHolidaysPanel(false)}
+                      style={{
+                        border: 'none',
+                        background: 'rgba(255,255,255,0.08)',
+                        color: tokens.calendarText || '#ebf2fb',
+                        width: isTablet ? '36px' : '32px',
+                        height: isTablet ? '36px' : '32px',
+                        borderRadius: '999px',
+                        fontSize: '18px',
+                        lineHeight: 1,
+                        cursor: 'pointer'
+                      }}
+                      aria-label="Close holidays"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {currentMonthHolidays.length === 0 ? (
+                    <div style={{ opacity: 0.7, fontStyle: 'italic', fontSize: isTablet ? '15px' : '14px' }}>No holidays this month</div>
+                  ) : (
+                    currentMonthHolidays.map((h, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
+                        <span style={{ color: '#ff4444', fontWeight: '900', fontSize: isTablet ? '20px' : '18px' }}>{h.date.getDate()}</span>
+                        <span style={{ flex: 1, marginLeft: '14px', fontSize: isTablet ? '15px' : '14px', fontWeight: '600', lineHeight: 1.35 }}>{h.name}</span>
+                      </div>
+                    ))
+                  )}
+                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.18)', fontSize: isTablet ? '13px' : '12px', opacity: 0.85 }}>
+                    ★ National Holiday<br/>
+                    ✦ Sunday
+                  </div>
                 </div>
               </div>
             </Html>
-          </group>
+          ) : (
+            <group position={[0, -1.6, 0.05]}>
+              <mesh>
+                <planeGeometry args={[2.4, 2.2]} />
+                <meshStandardMaterial color={tokens.calendarBg || '#1a212c'} roughness={0.9} transparent opacity={0.95} />
+              </mesh>
+              <Html transform position={[0, 0, 0.01]} distanceFactor={1.5} style={{ width: '260px', pointerEvents: 'none' }}>
+                <div style={{
+                  padding: '20px',
+                  fontFamily: 'Manrope, sans-serif',
+                  color: tokens.calendarText || '#ebf2fb',
+                  fontSize: '22px',
+                  lineHeight: '1.5'
+                }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '26px', marginBottom: '16px', borderBottom: `3px solid ${tokens.calendarAccent}`, paddingBottom: '8px' }}>
+                    Holidays
+                  </div>
+                  {currentMonthHolidays.length === 0 ? (
+                    <div style={{ opacity: 0.6, fontStyle: 'italic', fontSize: '20px' }}>No holidays this month</div>
+                  ) : (
+                    currentMonthHolidays.map((h, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
+                        <span style={{ color: '#ff4444', fontWeight: '900', fontSize: '26px' }}>{h.date.getDate()}</span>
+                        <span style={{ flex: 1, marginLeft: '14px', fontSize: '22px', fontWeight: '600' }}>{h.name}</span>
+                      </div>
+                    ))
+                  )}
+                  <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.3)', fontSize: '16px', opacity: 0.85 }}>
+                    ★ National Holiday<br/>
+                    ✦ Sunday
+                  </div>
+                </div>
+              </Html>
+            </group>
+          )
         )}
       </group>
 

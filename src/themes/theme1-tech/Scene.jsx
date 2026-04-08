@@ -4,10 +4,10 @@ import WallFrame from '../../scene/WallFrame'
 import { theme1Tokens } from './tokens'
 import Calendar3D from '../../components/calendar/Calendar3D'
 
-function TechProps({ isMobile }) {
+function TechProps({ isMobile, isTablet, isTabletLandscape }) {
   return (
     <group>
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <>
           <ModelAsset
             url="/models/theme1-tech/Super Computer.glb"
@@ -33,7 +33,7 @@ function TechProps({ isMobile }) {
         frameColor="#2a2220"
         matColor="#d8d2cb"
       />
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <WallFrame
           image="/images/art/tech-cyber.jpg"
           position={[-5.35, 2.55, -2.82]}
@@ -51,7 +51,7 @@ function TechProps({ isMobile }) {
         frameColor="#261e1b"
         matColor="#ded8d1"
       />
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <WallFrame
           image="/images/art/tech-circuit-2k.jpg"
           position={[4.55, 2.55, -2.82]}
@@ -62,15 +62,15 @@ function TechProps({ isMobile }) {
         />
       ) : null}
 
-      <Calendar3D tokens={theme1Tokens} isMobile={isMobile} />
+      <Calendar3D tokens={theme1Tokens} isMobile={isMobile} isTablet={isTablet} isTabletLandscape={isTabletLandscape} />
     </group>
   )
 }
 
-export default function Theme1Scene({ isMobile = false }) {
+export default function Theme1Scene({ isMobile = false, isTablet = false, isTabletLandscape = false }) {
   return (
-    <SceneShell tokens={theme1Tokens} isMobile={isMobile}>
-      <TechProps isMobile={isMobile} />
+    <SceneShell tokens={theme1Tokens} isMobile={isMobile} isTablet={isTablet}>
+      <TechProps isMobile={isMobile} isTablet={isTablet} isTabletLandscape={isTabletLandscape} />
     </SceneShell>
   )
 }

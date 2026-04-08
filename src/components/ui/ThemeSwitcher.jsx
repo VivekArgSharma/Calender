@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTheme } from '../../ThemeContext'
 
-export default function ThemeSwitcher({ isMobile = false }) {
+export default function ThemeSwitcher({ isMobile = false, isTablet = false, isTabletLandscape = false }) {
   const { activeTheme, setActiveTheme, themeOrder, themes } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -19,7 +19,7 @@ export default function ThemeSwitcher({ isMobile = false }) {
         aria-expanded={isOpen}
         aria-haspopup="dialog"
       >
-        {isMobile ? 'Theme' : 'Themes'}
+        {isMobile && !isTablet ? 'Theme' : isTabletLandscape ? 'Themes & Rooms' : 'Themes'}
       </button>
 
       {isOpen ? (

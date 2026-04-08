@@ -4,10 +4,10 @@ import WallFrame from '../../scene/WallFrame'
 import { theme2Tokens } from './tokens'
 import Calendar3D from '../../components/calendar/Calendar3D'
 
-function ArtProps({ isMobile }) {
+function ArtProps({ isMobile, isTablet, isTabletLandscape }) {
   return (
     <group>
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <>
           <ModelAsset
             url="/models/theme2-art/Easel.glb"
@@ -44,7 +44,7 @@ function ArtProps({ isMobile }) {
         frameColor="#5c3726"
         matColor="#eadbc7"
       />
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <WallFrame
           image="/images/art/art-gallery.jpg"
           position={[-5.15, 2.55, -2.82]}
@@ -62,7 +62,7 @@ function ArtProps({ isMobile }) {
         frameColor="#5a3424"
         matColor="#e8d8c4"
       />
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <WallFrame
           image="/images/art/art-portrait-2k.jpg"
           position={[4.95, 2.55, -2.82]}
@@ -73,15 +73,15 @@ function ArtProps({ isMobile }) {
         />
       ) : null}
 
-      <Calendar3D tokens={theme2Tokens} isMobile={isMobile} />
+      <Calendar3D tokens={theme2Tokens} isMobile={isMobile} isTablet={isTablet} isTabletLandscape={isTabletLandscape} />
     </group>
   )
 }
 
-export default function Theme2Scene({ isMobile = false }) {
+export default function Theme2Scene({ isMobile = false, isTablet = false, isTabletLandscape = false }) {
   return (
-    <SceneShell tokens={theme2Tokens} isMobile={isMobile}>
-      <ArtProps isMobile={isMobile} />
+    <SceneShell tokens={theme2Tokens} isMobile={isMobile} isTablet={isTablet}>
+      <ArtProps isMobile={isMobile} isTablet={isTablet} isTabletLandscape={isTabletLandscape} />
     </SceneShell>
   )
 }

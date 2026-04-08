@@ -211,7 +211,7 @@ function RoomBase({ tokens }) {
   )
 }
 
-export default function SceneShell({ tokens, children, isMobile = false }) {
+export default function SceneShell({ tokens, children, isMobile = false, isTablet = false }) {
   return (
     <group>
       <color attach="background" args={[tokens.background]} />
@@ -245,19 +245,19 @@ export default function SceneShell({ tokens, children, isMobile = false }) {
         color={tokens.rightAccent}
       />
 
-      {!isMobile ? <Environment preset={tokens.environmentPreset} environmentIntensity={tokens.environmentIntensity ?? 0.55} /> : null}
+      {(!isMobile || isTablet) ? <Environment preset={tokens.environmentPreset} environmentIntensity={tokens.environmentIntensity ?? 0.5} /> : null}
       <RoomBase tokens={tokens} />
-      {!isMobile ? <WallSconce position={[-5.65, 5.82, -2.92]} accent={tokens.leftAccent} metal={tokens.hookColor} /> : null}
-      {!isMobile ? <WallSconce position={[5.65, 5.82, -2.92]} accent={tokens.rightAccent} metal={tokens.hookColor} /> : null}
+      {(!isMobile || isTablet) ? <WallSconce position={[-5.65, 5.82, -2.92]} accent={tokens.leftAccent} metal={tokens.hookColor} /> : null}
+      {(!isMobile || isTablet) ? <WallSconce position={[5.65, 5.82, -2.92]} accent={tokens.rightAccent} metal={tokens.hookColor} /> : null}
 
       <group>{children}</group>
 
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <ContactShadows
           position={[0, 0.01, 0]}
-          opacity={0.34}
+          opacity={isTablet ? 0.26 : 0.34}
           scale={13.5}
-          blur={2.1}
+          blur={isTablet ? 1.6 : 2.1}
           far={7}
           color={tokens.shadowColor}
         />

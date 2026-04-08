@@ -38,10 +38,10 @@ function SaxStand({ position }) {
   )
 }
 
-function MusicProps({ isMobile }) {
+function MusicProps({ isMobile, isTablet, isTabletLandscape }) {
   return (
     <group>
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <>
           <ModelAsset
             url="/models/theme3-music/Guitar Amp.glb"
@@ -82,7 +82,7 @@ function MusicProps({ isMobile }) {
         frameColor="#261812"
         matColor="#d8c7b6"
       />
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <WallFrame
           image="/images/art/music-concert.jpg"
           position={[-5.15, 2.55, -2.82]}
@@ -100,7 +100,7 @@ function MusicProps({ isMobile }) {
         frameColor="#23150f"
         matColor="#ddccba"
       />
-      {!isMobile ? (
+      {(!isMobile || isTablet) ? (
         <WallFrame
           image="/images/art/music-stage-2k.jpg"
           position={[4.95, 2.55, -2.82]}
@@ -111,15 +111,15 @@ function MusicProps({ isMobile }) {
         />
       ) : null}
 
-      <Calendar3D tokens={theme3Tokens} isMobile={isMobile} />
+      <Calendar3D tokens={theme3Tokens} isMobile={isMobile} isTablet={isTablet} isTabletLandscape={isTabletLandscape} />
     </group>
   )
 }
 
-export default function Theme3Scene({ isMobile = false }) {
+export default function Theme3Scene({ isMobile = false, isTablet = false, isTabletLandscape = false }) {
   return (
-    <SceneShell tokens={theme3Tokens} isMobile={isMobile}>
-      <MusicProps isMobile={isMobile} />
+    <SceneShell tokens={theme3Tokens} isMobile={isMobile} isTablet={isTablet}>
+      <MusicProps isMobile={isMobile} isTablet={isTablet} isTabletLandscape={isTabletLandscape} />
     </SceneShell>
   )
 }
