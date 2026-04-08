@@ -1192,76 +1192,7 @@ export default function Calendar3D({ tokens, isMobile = false, isTablet = false,
         </Html>
 
         {/* Dropdown Panel - expands downward from button */}
-        {showHolidaysPanel && (
-          (isMobile || isTablet) ? (
-            <Html fullscreen style={{ pointerEvents: 'auto' }}>
-              <div
-                onClick={() => setShowHolidaysPanel(false)}
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '20px',
-                  background: 'rgba(8, 10, 14, 0.38)',
-                  backdropFilter: 'blur(6px)'
-                }}
-              >
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    width: isTabletLandscape ? 'min(40vw, 400px)' : isTablet ? 'min(58vw, 420px)' : 'min(86vw, 340px)',
-                    maxHeight: isTablet ? 'min(62vh, 520px)' : 'min(68vh, 460px)',
-                    overflow: 'auto',
-                    padding: isTablet ? '18px' : '16px',
-                    borderRadius: '24px',
-                    background: tokens.calendarBg || '#1a212c',
-                    border: `1px solid ${tokens.cardBorder || 'rgba(255,255,255,0.18)'}`,
-                    color: tokens.calendarText || '#ebf2fb',
-                    fontFamily: 'Manrope, sans-serif',
-                    boxShadow: '0 24px 70px rgba(0,0,0,0.3)'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '14px', paddingBottom: '10px', borderBottom: `2px solid ${tokens.calendarAccent}` }}>
-                    <div style={{ fontWeight: '800', fontSize: isTablet ? '20px' : '18px' }}>Holidays</div>
-                    <button
-                      type="button"
-                      onClick={() => setShowHolidaysPanel(false)}
-                      style={{
-                        border: 'none',
-                        background: 'rgba(255,255,255,0.08)',
-                        color: tokens.calendarText || '#ebf2fb',
-                        width: isTablet ? '36px' : '32px',
-                        height: isTablet ? '36px' : '32px',
-                        borderRadius: '999px',
-                        fontSize: '18px',
-                        lineHeight: 1,
-                        cursor: 'pointer'
-                      }}
-                      aria-label="Close holidays"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  {currentMonthHolidays.length === 0 ? (
-                    <div style={{ opacity: 0.7, fontStyle: 'italic', fontSize: isTablet ? '15px' : '14px' }}>No holidays this month</div>
-                  ) : (
-                    currentMonthHolidays.map((h, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
-                        <span style={{ color: '#ff4444', fontWeight: '900', fontSize: isTablet ? '20px' : '18px' }}>{h.date.getDate()}</span>
-                        <span style={{ flex: 1, marginLeft: '14px', fontSize: isTablet ? '15px' : '14px', fontWeight: '600', lineHeight: 1.35 }}>{h.name}</span>
-                      </div>
-                    ))
-                  )}
-                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.18)', fontSize: isTablet ? '13px' : '12px', opacity: 0.85 }}>
-                    ★ National Holiday<br/>
-                    ✦ Sunday
-                  </div>
-                </div>
-              </div>
-            </Html>
-          ) : (
+        {showHolidaysPanel && !isMobile && !isTablet ? (
             <group position={[0, -1.6, 0.05]}>
               <mesh>
                 <planeGeometry args={[2.4, 2.2]} />
@@ -1295,9 +1226,78 @@ export default function Calendar3D({ tokens, isMobile = false, isTablet = false,
                 </div>
               </Html>
             </group>
-          )
-        )}
+        ) : null}
       </group>
+
+      {showHolidaysPanel && (isMobile || isTablet) ? (
+        <Html fullscreen style={{ pointerEvents: 'auto' }}>
+          <div
+            onClick={() => setShowHolidaysPanel(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+              background: 'rgba(8, 10, 14, 0.38)',
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: isTabletLandscape ? 'min(40vw, 400px)' : isTablet ? 'min(58vw, 420px)' : 'min(86vw, 340px)',
+                maxHeight: isTablet ? 'min(62vh, 520px)' : 'min(68vh, 460px)',
+                overflow: 'auto',
+                padding: isTablet ? '18px' : '16px',
+                borderRadius: '24px',
+                background: tokens.calendarBg || '#1a212c',
+                border: `1px solid ${tokens.cardBorder || 'rgba(255,255,255,0.18)'}`,
+                color: tokens.calendarText || '#ebf2fb',
+                fontFamily: 'Manrope, sans-serif',
+                boxShadow: '0 24px 70px rgba(0,0,0,0.3)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '14px', paddingBottom: '10px', borderBottom: `2px solid ${tokens.calendarAccent}` }}>
+                <div style={{ fontWeight: '800', fontSize: isTablet ? '20px' : '18px' }}>Holidays</div>
+                <button
+                  type="button"
+                  onClick={() => setShowHolidaysPanel(false)}
+                  style={{
+                    border: 'none',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: tokens.calendarText || '#ebf2fb',
+                    width: isTablet ? '36px' : '32px',
+                    height: isTablet ? '36px' : '32px',
+                    borderRadius: '999px',
+                    fontSize: '18px',
+                    lineHeight: 1,
+                    cursor: 'pointer'
+                  }}
+                  aria-label="Close holidays"
+                >
+                  ×
+                </button>
+              </div>
+              {currentMonthHolidays.length === 0 ? (
+                <div style={{ opacity: 0.7, fontStyle: 'italic', fontSize: isTablet ? '15px' : '14px' }}>No holidays this month</div>
+              ) : (
+                currentMonthHolidays.map((h, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
+                    <span style={{ color: '#ff4444', fontWeight: '900', fontSize: isTablet ? '20px' : '18px' }}>{h.date.getDate()}</span>
+                    <span style={{ flex: 1, marginLeft: '14px', fontSize: isTablet ? '15px' : '14px', fontWeight: '600', lineHeight: 1.35 }}>{h.name}</span>
+                  </div>
+                ))
+              )}
+              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.18)', fontSize: isTablet ? '13px' : '12px', opacity: 0.85 }}>
+                ★ National Holiday<br/>
+                ✦ Sunday
+              </div>
+            </div>
+          </div>
+        </Html>
+      ) : null}
 
     </group>
   )
