@@ -534,6 +534,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
   const [displayedMonthOffset, setDisplayedMonthOffset] = useState(0)
   const gestureRef = useRef({ startX: 0, startY: 0, startTime: 0, dayInfo: null, longPressTriggered: false })
   const longPressRef = useRef(null)
+  const lastTapRef = useRef({ time: 0, key: '' })
 
   const currentMonthHolidays = useMemo(() => {
     const visibleDate = addMonths(currentDate, displayedMonthOffset)
@@ -765,6 +766,16 @@ export default function Calendar3D({ tokens, isMobile = false }) {
 
     if (gesture.longPressTriggered) return
 
+    const tapKey = format(gesture.dayInfo.date, 'yyyy-MM-dd')
+    const now = Date.now()
+    const isDoubleTap = lastTapRef.current.key === tapKey && now - lastTapRef.current.time < 320
+    lastTapRef.current = { time: now, key: tapKey }
+
+    if (isDoubleTap) {
+      handleDayAnnotation(gesture.dayInfo.date)
+      return
+    }
+
     if (isRangeSelectionMode) {
       handleDayAnnotation(gesture.dayInfo.date)
       return
@@ -936,7 +947,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
               {format(visibleMonthDate, 'MMMM yyyy')}
             </div>
             <div style={{ marginTop: '4px', fontSize: '11px', opacity: 0.85, lineHeight: 1.35 }}>
-              Tap date to select • Long-press to note • Swipe to change month
+              Tap to select • Double-tap for note • Swipe to change month
             </div>
           </div>
         </Html>

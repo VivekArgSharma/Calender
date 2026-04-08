@@ -124,11 +124,12 @@ select {
   .ui-shell {
     padding: 14px;
     justify-content: center;
-    align-items: flex-end;
+    align-items: flex-start;
   }
 
   .theme-picker-wrap {
     width: auto;
+    margin: 0 auto;
   }
 
   .theme-picker-button {
@@ -136,12 +137,14 @@ select {
     padding: 14px 18px;
     font-size: 15px;
     font-weight: 700;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
   }
 
   .theme-picker-modal {
     right: 50%;
     transform: translateX(50%);
-    bottom: 82px;
+    top: 76px;
+    bottom: auto;
     width: min(320px, calc(100vw - 28px));
     max-height: min(52vh, 360px);
     border-radius: 20px;
