@@ -2,6 +2,7 @@ import ModelAsset from '../../scene/ModelAsset'
 import SceneShell from '../../scene/SceneShell'
 import WallFrame from '../../scene/WallFrame'
 import { theme3Tokens } from './tokens'
+import Calendar3D from '../../components/calendar/Calendar3D'
 
 function MusicStand({ position, height = 1.04 }) {
   return (
@@ -101,6 +102,8 @@ function MusicProps() {
         frameColor="#261812"
         matColor="#d8c7b6"
       />
+
+      <Calendar3D tokens={theme3Tokens} />
     </group>
   )
 }

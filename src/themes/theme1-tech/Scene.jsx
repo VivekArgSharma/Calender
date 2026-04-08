@@ -2,6 +2,7 @@ import ModelAsset from '../../scene/ModelAsset'
 import SceneShell from '../../scene/SceneShell'
 import WallFrame from '../../scene/WallFrame'
 import { theme1Tokens } from './tokens'
+import Calendar3D from '../../components/calendar/Calendar3D'
 
 function TechProps() {
   return (
@@ -52,6 +53,8 @@ function TechProps() {
         frameColor="#1e1715"
         matColor="#e5e1db"
       />
+
+      <Calendar3D tokens={theme1Tokens} />
     </group>
   )
 }

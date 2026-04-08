@@ -95,29 +95,29 @@ function CenterMount({ tokens }) {
   return (
     <group position={[0, 3.18, -3.08]}>
       {/* Outer frame - sits closest to wall */}
-      <RoundedBox args={[4.92, 6.14, 0.16]} radius={0.18} smoothness={8} position={[0, 0, 0]}>
+      <RoundedBox args={[4.6, 5.5, 0.16]} radius={0.18} smoothness={8} position={[0, 0, 0]}>
         <meshStandardMaterial color={tokens.trimColor} roughness={0.72} metalness={0.08} />
       </RoundedBox>
       {/* Inner mat */}
-      <RoundedBox args={[4.52, 5.74, 0.10]} radius={0.12} smoothness={8} position={[0, 0, 0.14]}>
+      <RoundedBox args={[4.2, 5.1, 0.10]} radius={0.12} smoothness={8} position={[0, 0, 0.14]}>
         <meshStandardMaterial color={tokens.wallColor} roughness={0.94} metalness={0.02} />
       </RoundedBox>
       {/* Calendar surface - furthest from wall */}
-      <RoundedBox args={[4.24, 5.44, 0.05]} radius={0.08} smoothness={6} position={[0, 0, 0.24]}>
+      <RoundedBox args={[3.8, 4.7, 0.05]} radius={0.08} smoothness={6} position={[0, 0, 0.24]}>
         <meshStandardMaterial color={tokens.calendarGlowColor} roughness={0.97} metalness={0.01} />
       </RoundedBox>
       {/* Bottom shelf */}
-      <mesh position={[0, -2.92, 0.26]}>
+      <mesh position={[0, -2.6, 0.26]}>
         <boxGeometry args={[1.08, 0.12, 0.08]} />
         <meshStandardMaterial color={tokens.baseboardColor} roughness={0.74} metalness={0.12} />
       </mesh>
       {/* Top hook ball */}
-      <mesh position={[0, 3.18, 0.24]}>
+      <mesh position={[0, 2.85, 0.24]}>
         <sphereGeometry args={[0.085, 24, 24]} />
         <meshStandardMaterial color={tokens.hookColor} metalness={0.88} roughness={0.22} />
       </mesh>
       {/* Hook rod */}
-      <mesh position={[0, 2.98, 0.24]}>
+      <mesh position={[0, 2.65, 0.24]}>
         <cylinderGeometry args={[0.024, 0.024, 0.4, 18]} />
         <meshStandardMaterial color={tokens.hookColor} metalness={0.88} roughness={0.22} />
       </mesh>

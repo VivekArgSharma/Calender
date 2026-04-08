@@ -2,6 +2,7 @@ import ModelAsset from '../../scene/ModelAsset'
 import SceneShell from '../../scene/SceneShell'
 import WallFrame from '../../scene/WallFrame'
 import { theme2Tokens } from './tokens'
+import Calendar3D from '../../components/calendar/Calendar3D'
 
 function ArtProps() {
   return (
@@ -63,6 +64,8 @@ function ArtProps() {
         frameColor="#4d2f22"
         matColor="#efe2d0"
       />
+
+      <Calendar3D tokens={theme2Tokens} />
     </group>
   )
 }

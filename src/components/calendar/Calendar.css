@@ -1,0 +1,401 @@
+.calendar-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 80px));
+  height: min(680px, calc(100vh - 100px));
+  max-width: 520px;
+  max-height: 680px;
+  background: var(--cal-bg);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--cal-border);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--cal-border);
+}
+
+.month-label {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--cal-text);
+  letter-spacing: 0.02em;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-btn {
+  background: transparent;
+  border: 1px solid var(--cal-border);
+  color: var(--cal-text);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 180ms ease;
+}
+
+.nav-btn:hover {
+  background: var(--cal-selected);
+}
+
+.select-mode-btn {
+  background: transparent;
+  border: 1px solid var(--cal-border);
+  color: var(--cal-text);
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 180ms ease;
+  white-space: nowrap;
+}
+
+.select-mode-btn.active {
+  background: var(--cal-accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.calendar-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.calendar-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.week-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 12px 16px 8px;
+  gap: 4px;
+}
+
+.week-day {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--cal-text);
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 4px 16px 16px;
+  gap: 4px;
+  flex: 1;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: all 150ms ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--cal-text);
+}
+
+.calendar-day:hover {
+  background: var(--cal-selected);
+}
+
+.calendar-day.faded {
+  opacity: 0.3;
+}
+
+.calendar-day.today {
+  border: 2px solid var(--cal-accent);
+}
+
+.calendar-day.selected {
+  background: var(--cal-selected);
+}
+
+.calendar-day.in-selection {
+  background: var(--cal-range);
+}
+
+.day-number {
+  color: var(--cal-text);
+}
+
+.marker {
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--cal-accent);
+}
+
+.note-marker {
+  background: #ffd700;
+}
+
+.selection-indicator {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cal-highlight);
+  border: 1px solid #fff;
+}
+
+.side-panel {
+  width: 180px;
+  border-left: 1px solid var(--cal-border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.side-panel-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cal-text);
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.no-selections {
+  font-size: 0.8rem;
+  color: var(--cal-text);
+  opacity: 0.5;
+}
+
+.selection-item {
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--cal-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.selection-item:hover {
+  background: var(--cal-selected);
+}
+
+.selection-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--cal-text);
+  margin-bottom: 2px;
+}
+
+.selection-count {
+  font-size: 0.72rem;
+  color: var(--cal-text);
+  opacity: 0.6;
+}
+
+.delete-btn {
+  margin-top: 6px;
+  background: transparent;
+  border: none;
+  color: #ff6b6b;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.save-dialog {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--cal-bg);
+  border: 1px solid var(--cal-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.save-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--cal-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--cal-text);
+  font-size: 0.9rem;
+  width: 160px;
+  outline: none;
+}
+
+.save-input::placeholder {
+  color: var(--cal-text);
+  opacity: 0.5;
+}
+
+.save-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 180ms ease;
+  background: transparent;
+  border: 1px solid var(--cal-border);
+  color: var(--cal-text);
+}
+
+.save-btn.primary {
+  background: var(--cal-accent);
+  border: none;
+  color: #fff;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: var(--cal-bg);
+  border: 1px solid var(--cal-border);
+  border-radius: 16px;
+  padding: 24px;
+  width: min(340px, calc(100vw - 60px));
+  backdrop-filter: blur(20px);
+}
+
+.modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--cal-text);
+  margin-bottom: 16px;
+}
+
+.section-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--cal-text);
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.mark-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mark-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 180ms ease;
+  background: transparent;
+  border: 1px solid var(--cal-border);
+  color: var(--cal-text);
+}
+
+.mark-btn.active {
+  background: var(--cal-accent);
+  border-color: transparent;
+  color: #fff;
+}
+
+.note-section {
+  margin-bottom: 16px;
+}
+
+.note-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--cal-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--cal-text);
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.note-input::placeholder {
+  color: var(--cal-text);
+  opacity: 0.5;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.delete-note-btn {
+  background: transparent;
+  border: none;
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin-right: auto;
+  padding: 10px 0;
+}
+
+.done-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--cal-accent);
+  border: none;
+  color: #fff;
+}

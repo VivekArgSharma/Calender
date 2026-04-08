@@ -29,4 +29,8 @@ export const theme1Tokens = {
   cardSurface: 'rgba(26, 33, 44, 0.78)',
   cardBorder: 'rgba(226, 239, 255, 0.18)',
   chipColor: 'rgba(82, 123, 180, 0.9)',
+  calendarBg: '#e8f0fa',
+  calendarText: '#1a212c',
+  calendarAccent: '#4b78b6',
+  cardBorder: 'rgba(226, 239, 255, 0.18)',
 }
