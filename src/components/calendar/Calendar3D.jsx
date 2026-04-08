@@ -277,13 +277,18 @@ function createPageFlipGeometry(width, height, segmentsX, segmentsY) {
   return geometry
 }
 
-function CalendarPage({ frontTexture, backTexture, flipProgress, position = [0, 0, 0], direction = 1 }) {
+function CalendarPage({ frontTexture, backTexture, flipProgress, position = [0, 0, 0], direction = 1, isMobile = false }) {
   const meshRef = useRef()
   const groupRef = useRef()
   
   const geometry = useMemo(() => {
-    return createPageFlipGeometry(CALENDAR_WIDTH, CALENDAR_HEIGHT, SEGMENTS_X, SEGMENTS_Y)
-  }, [])
+    return createPageFlipGeometry(
+      CALENDAR_WIDTH,
+      CALENDAR_HEIGHT,
+      isMobile ? 16 : SEGMENTS_X,
+      isMobile ? 16 : SEGMENTS_Y,
+    )
+  }, [isMobile])
 
   useFrame(() => {
     if (!meshRef.current || !geometry.userData.originalPositions) return
@@ -464,18 +469,18 @@ function CartoonyArrow({ startVec, endVec, color }) {
   )
 }
 
-function StickyNote3D({ text, onChange, position, onEnter }) {
+function StickyNote3D({ text, onChange, position, onEnter, isMobile = false }) {
   return (
     <group position={position}>
       <mesh castShadow receiveShadow>
-        <planeGeometry args={[1.5, 1.5]} />
+        <planeGeometry args={isMobile ? [2.1, 1.2] : [1.5, 1.5]} />
         <meshStandardMaterial color="#fffacd" roughness={0.9} />
       </mesh>
       <Html transform position={[0, 0, 0.02]} distanceFactor={1.5} zIndexRange={[100, 0]}>
         <div style={{
-            width: '180px',
-            height: '180px',
-            padding: '10px',
+            width: isMobile ? '240px' : '180px',
+            height: isMobile ? '136px' : '180px',
+            padding: isMobile ? '12px' : '10px',
             boxSizing: 'border-box'
         }}>
           <textarea
@@ -495,9 +500,11 @@ function StickyNote3D({ text, onChange, position, onEnter }) {
               border: 'none',
               outline: 'none',
               resize: 'none',
+              borderRadius: isMobile ? '12px' : '0',
               fontFamily: 'Manrope, sans-serif',
               fontWeight: '600',
-              fontSize: '18px',
+              fontSize: isMobile ? '16px' : '18px',
+              lineHeight: '1.35',
               color: '#333'
             }}
           />
@@ -559,8 +566,8 @@ export default function Calendar3D({ tokens, isMobile = false }) {
   }, [tokens.heroImage])
 
   const calendarTexture = useMemo(() => {
-    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset), tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, hoveredDay)
-  }, [currentDate, tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset, hoveredDay])
+    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset), tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, isMobile ? null : hoveredDay)
+  }, [currentDate, tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset, hoveredDay, isMobile])
 
   const nextMonthTexture = useMemo(() => {
     return createCalendarTexture(addMonths(currentDate, displayedMonthOffset + 1), tokens, 0, eventsArr, annotations, draftRangeStart, heroImage, null)
@@ -772,6 +779,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
   }, [clearLongPress])
 
   const handleCalendarHover = useCallback((e) => {
+    if (isMobile) return
     e.stopPropagation()
     const uv = e.uv
     if (!uv) {
@@ -781,7 +789,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
 
     const dayInfo = getDayFromUV(uv, currentDate)
     setHoveredDay(dayInfo)
-  }, [currentDate])
+  }, [currentDate, isMobile])
 
   const activeDayEvents = useMemo(() => {
     return eventsArr.find(ev =>
@@ -815,6 +823,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
   const holidaysButtonPos = isMobile ? [1.05, 2.75, 1.0] : [CALENDAR_WIDTH / 2 + 1.6, 1.6, 1.0]
   const stickyNotePosition = isMobile ? [0, -3.35, 0.8] : [CALENDAR_WIDTH / 2 + 2.0, 0, 0.5]
   const stickyArrowStart = isMobile ? new THREE.Vector3(0, -2.55, 0.8) : new THREE.Vector3(CALENDAR_WIDTH / 2 + 2.0 - 0.75, 0, 0.5)
+  const visibleMonthDate = addMonths(currentDate, displayedMonthOffset)
 
   return (
     <group position={[0, 3.18, 0.5]}>
@@ -859,7 +868,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
 
 
       {/* Stack of remaining pages */}
-      {[0, -0.005, -0.01].map((z, i) => (
+      {(isMobile ? [0, -0.005] : [0, -0.005, -0.01]).map((z, i) => (
         <mesh key={`stack-${i}`} position={[0, 0, z]} renderOrder={100}>
           <planeGeometry args={[CALENDAR_WIDTH, CALENDAR_HEIGHT]} />
           <meshStandardMaterial 
@@ -878,6 +887,7 @@ export default function Calendar3D({ tokens, isMobile = false }) {
           flipProgress={flipProgress}
           position={[0, 0, 0.05]}
           direction={flipDirection}
+          isMobile={isMobile}
         />
       )}
 
@@ -907,6 +917,30 @@ export default function Calendar3D({ tokens, isMobile = false }) {
         <planeGeometry args={[CALENDAR_WIDTH * 0.8, 0.08]} />
         <meshStandardMaterial color="#000000" transparent opacity={0.3} roughness={1} />
       </mesh>
+
+      {isMobile ? (
+        <Html transform position={[0, -3.05, 1.05]} distanceFactor={1.55} pointerEvents="none">
+          <div style={{
+            width: '240px',
+            padding: '10px 12px',
+            borderRadius: '18px',
+            background: 'rgba(18, 22, 28, 0.78)',
+            border: `1px solid ${tokens.cardBorder || 'rgba(255,255,255,0.15)'}`,
+            color: '#f7f8fb',
+            fontFamily: 'Manrope, sans-serif',
+            textAlign: 'center',
+            boxShadow: '0 12px 36px rgba(0,0,0,0.22)',
+            backdropFilter: 'blur(12px)'
+          }}>
+            <div style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.01em' }}>
+              {format(visibleMonthDate, 'MMMM yyyy')}
+            </div>
+            <div style={{ marginTop: '4px', fontSize: '11px', opacity: 0.85, lineHeight: 1.35 }}>
+              Tap date to select • Long-press to note • Swipe to change month
+            </div>
+          </div>
+        </Html>
+      ) : null}
 
       {/* Primary Action Button - Left side top */}
       <group position={actionButtonPos}>
@@ -959,7 +993,8 @@ export default function Calendar3D({ tokens, isMobile = false }) {
             text={activeAnnotation.text} 
             onChange={(val) => setAnnotations(prev => prev.map(a => a.id === activeNoteId ? { ...a, text: val } : a))} 
             onEnter={() => setActiveNoteId(null)}
-             position={stickyNotePosition} 
+             position={stickyNotePosition}
+             isMobile={isMobile}
            />
           {/* Cartoony Arrow connecting sticky note to the selected start date */}
           {arrowTargetVec && (
