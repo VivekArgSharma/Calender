@@ -768,7 +768,7 @@ export default function Calendar3D({ tokens }) {
         <mesh key={`stack-${i}`} position={[0, 0, z]} renderOrder={100}>
           <planeGeometry args={[CALENDAR_WIDTH, CALENDAR_HEIGHT]} />
           <meshStandardMaterial 
-            map={isFlipping ? (flipDirection > 0 ? nextMonthTexture : prevMonthTexture) : (flipDirection >= 0 ? nextMonthTexture : prevMonthTexture)}
+            map={nextMonthTexture}
             roughness={0.9} 
             metalness={0.01} 
           />
@@ -797,20 +797,12 @@ export default function Calendar3D({ tokens }) {
       >
         <planeGeometry args={[CALENDAR_WIDTH, CALENDAR_HEIGHT]} />
         <meshStandardMaterial 
-          map={isFlipping ? (flipDirection > 0 ? nextMonthTexture : prevMonthTexture) : (flipDirection >= 0 ? nextMonthTexture : prevMonthTexture)} 
+          map={calendarTexture}
           roughness={0.85} 
           metalness={0.02} 
           side={THREE.DoubleSide} 
         />
       </mesh>
-
-      {/* Page curl shadow effect */}
-      {isFlipping && (
-        <mesh position={[flipDirection > 0 ? CALENDAR_WIDTH / 2 - 0.3 : -CALENDAR_WIDTH / 2 + 0.3, -CALENDAR_HEIGHT / 2 + 0.3, 0.03]} renderOrder={102}>
-          <planeGeometry args={[0.8, 1.2]} />
-          <meshStandardMaterial color="#000000" transparent opacity={0.4 * flipProgress} roughness={1} />
-        </mesh>
-      )}
 
       {/* Page shadow */}
       <mesh position={[0, -CALENDAR_HEIGHT / 2 - 0.1, 1.0]}>
@@ -836,21 +828,22 @@ export default function Calendar3D({ tokens }) {
           }}
           renderOrder={1002}
         >
-          <planeGeometry args={[1.9, 0.5]} />
+          <boxGeometry args={[2.0, 0.55, 0.05]} />
           <meshStandardMaterial 
             color={activeNoteId ? '#f44336' : (isRangeSelectionMode ? '#527bb4' : (tokens.chipColor || tokens.calendarAccent || '#4b78b6'))} 
             roughness={0.5} 
           />
         </mesh>
-        <Html transform position={[0, 0, 0.02]} distanceFactor={1.5} pointerEvents="none">
+        <Html transform position={[0, 0, 0.03]} distanceFactor={1.5} pointerEvents="none">
           <div style={{
             color: '#fff',
             fontFamily: 'Manrope, sans-serif',
-            fontSize: '16px',
+            fontSize: '18px',
             fontWeight: 'bold',
             textAlign: 'center',
-            width: '200px',
-            userSelect: 'none'
+            width: '220px',
+            userSelect: 'none',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
           }}>
             {activeNoteId ? 'Delete Note' : 
              !isRangeSelectionMode ? 'Select Dates Range' : 
@@ -890,21 +883,22 @@ export default function Calendar3D({ tokens }) {
           }}
           renderOrder={1003}
         >
-          <planeGeometry args={[1.5, 0.5]} />
+          <boxGeometry args={[1.6, 0.55, 0.05]} />
           <meshStandardMaterial 
             color={showHolidaysPanel ? (tokens.calendarAccent || '#4b78b6') : (tokens.chipColor || tokens.calendarAccent || '#4b78b6')} 
             roughness={0.5} 
           />
         </mesh>
-        <Html transform position={[0, 0, 0.01]} distanceFactor={1.5} pointerEvents="none">
+        <Html transform position={[0, 0, 0.03]} distanceFactor={1.5} pointerEvents="none">
           <div style={{
             color: '#fff',
             fontFamily: 'Manrope, sans-serif',
-            fontSize: '16px',
+            fontSize: '18px',
             fontWeight: 'bold',
             textAlign: 'center',
-            width: '170px',
-            userSelect: 'none'
+            width: '180px',
+            userSelect: 'none',
+            textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
           }}>
             Holidays {showHolidaysPanel ? '▼' : '▶'}
           </div>
