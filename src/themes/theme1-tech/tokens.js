@@ -33,4 +33,5 @@ export const theme1Tokens = {
   calendarText: '#1a212c',
   calendarAccent: '#4b78b6',
   cardBorder: 'rgba(226, 239, 255, 0.18)',
+  heroImage: '/images/art/tech-cyber.jpg',
 }

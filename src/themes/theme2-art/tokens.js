@@ -33,4 +33,5 @@ export const theme2Tokens = {
   calendarText: '#2f221d',
   calendarAccent: '#c06f46',
   cardBorder: 'rgba(255, 224, 191, 0.16)',
+  heroImage: '/images/art/art-gallery.jpg',
 }

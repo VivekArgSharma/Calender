@@ -33,4 +33,5 @@ export const theme3Tokens = {
   calendarText: '#251f29',
   calendarAccent: '#ff9a4f',
   cardBorder: 'rgba(255, 221, 186, 0.18)',
+  heroImage: '/images/art/music-stage.jpg',
 }

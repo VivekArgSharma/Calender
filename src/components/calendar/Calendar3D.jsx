@@ -1,18 +1,21 @@
 import { useRef, useMemo, useState, useCallback, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
-  startOfWeek, endOfWeek, isSameMonth, isSameDay,
+  startOfWeek, endOfWeek, isSameMonth, isSameDay, isAfter,
   addMonths, subMonths, format, isToday
 } from 'date-fns'
+import { indianHolidays2026, isSunday, isHoliday, getHolidaysForMonth } from '../../data/indianHolidays'
 
 const CALENDAR_WIDTH = 3.2
 const CALENDAR_HEIGHT = 4.2
-const SEGMENTS_X = 40
-const SEGMENTS_Y = 40
+const SEGMENTS_X = 32
+const SEGMENTS_Y = 32
 
 const STORAGE_KEY = 'calendar-events'
+const ANNOTATIONS_KEY = 'calendar-annotations'
 
 function getEvents() {
   try {
@@ -27,7 +30,61 @@ function saveEvents(events) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(events))
 }
 
-function createCalendarTexture(date, tokens, activeDay, eventsArr) {
+function getAnnotations() {
+  try {
+    const saved = localStorage.getItem(ANNOTATIONS_KEY)
+    return saved ? JSON.parse(saved) : []
+  } catch {
+    return []
+  }
+}
+
+function saveAnnotations(ann) {
+  localStorage.setItem(ANNOTATIONS_KEY, JSON.stringify(ann))
+}
+
+function getHeroShape(ctx, width, height, themeId) {
+  ctx.beginPath()
+  
+  const margin = 30
+  const imageHeight = 500
+  const vNotchWidth = 140
+  const vNotchDepth = 70
+  
+  ctx.moveTo(margin, margin)
+  ctx.lineTo(width - margin, margin)
+  ctx.lineTo(width - margin, imageHeight - vNotchDepth)
+  ctx.lineTo(width / 2 + vNotchWidth / 2, imageHeight - vNotchDepth)
+  ctx.lineTo(width / 2, imageHeight)
+  ctx.lineTo(width / 2 - vNotchWidth / 2, imageHeight - vNotchDepth)
+  ctx.lineTo(margin, imageHeight - vNotchDepth)
+  ctx.closePath()
+  
+  ctx.clip()
+}
+
+function drawHeroBorder(ctx, width, height, themeId) {
+  const margin = 30
+  const imageHeight = 500
+  const vNotchWidth = 140
+  const vNotchDepth = 70
+  
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'
+  ctx.lineWidth = 3
+  
+  ctx.beginPath()
+  ctx.moveTo(margin, margin)
+  ctx.lineTo(width - margin, margin)
+  ctx.lineTo(width - margin, imageHeight - vNotchDepth)
+  ctx.lineTo(width / 2 + vNotchWidth / 2, imageHeight - vNotchDepth)
+  ctx.lineTo(width / 2, imageHeight)
+  ctx.lineTo(width / 2 - vNotchWidth / 2, imageHeight - vNotchDepth)
+  ctx.lineTo(margin, imageHeight - vNotchDepth)
+  ctx.closePath()
+  ctx.stroke()
+}
+
+function createCalendarTexture(date, tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage) {
   const canvas = document.createElement('canvas')
   canvas.width = 1024
   canvas.height = 1312
@@ -36,26 +93,36 @@ function createCalendarTexture(date, tokens, activeDay, eventsArr) {
   ctx.fillStyle = tokens.calendarBg || '#1a212c'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
+  if (heroImage) {
+    ctx.save()
+    getHeroShape(ctx, canvas.width, canvas.height, tokens.id)
+    ctx.drawImage(heroImage, 0, 0, canvas.width, 500)
+    ctx.restore()
+    ctx.save()
+    getHeroShape(ctx, canvas.width, canvas.height, tokens.id)
+    drawHeroBorder(ctx, canvas.width, canvas.height, tokens.id)
+    ctx.restore()
+  } else {
+    ctx.fillStyle = tokens.calendarAccent || '#8ec9ff'
+    ctx.fillRect(0, 0, canvas.width, 500)
+  }
+
   ctx.strokeStyle = tokens.cardBorder || 'rgba(226, 239, 255, 0.18)'
   ctx.lineWidth = 4
   ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40)
 
-  ctx.fillStyle = tokens.calendarAccent || '#8ec9ff'
-  ctx.fillRect(0, 0, canvas.width, 120)
-
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = tokens.calendarText || '#ebf2fb'
   ctx.font = 'bold 48px Manrope, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(format(date, 'MMMM yyyy'), canvas.width / 2, 60)
+  ctx.fillText(format(date, 'MMMM yyyy'), canvas.width / 2, 560)
 
   const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-  ctx.fillStyle = tokens.calendarText || '#ebf2fb'
   ctx.globalAlpha = 0.6
   ctx.font = 'bold 24px Manrope, sans-serif'
   const colWidth = canvas.width / 7
   weekDays.forEach((day, i) => {
-    ctx.fillText(day, colWidth * i + colWidth / 2, 160)
+    ctx.fillText(day, colWidth * i + colWidth / 2, 630)
   })
   ctx.globalAlpha = 1
 
@@ -65,45 +132,107 @@ function createCalendarTexture(date, tokens, activeDay, eventsArr) {
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
 
-  const rowHeight = (canvas.height - 200) / 6
+  const yStart = 660
+  const rowHeight = (canvas.height - yStart) / 6
   const today = new Date()
   const accent = tokens.calendarAccent || '#8ec9ff'
   const textColor = tokens.calendarText || '#ebf2fb'
+  const holidayColor = '#ff4444'
+  const currentMonthNum = date.getMonth() + 1
 
   days.forEach((day, index) => {
     const col = index % 7
     const row = Math.floor(index / 7)
     const x = col * colWidth + colWidth / 2
-    const y = 200 + row * rowHeight + rowHeight / 2
+    const y = yStart + row * rowHeight + rowHeight / 2
 
     const isCurrentMonth = isSameMonth(day, date)
     const isTodayDate = isSameDay(day, today)
     const isActiveDay = activeDay === day.getDate() && isSameMonth(day, date)
+    const isSundayDate = isSunday(day)
+    const holidayInfo = isHoliday(day, indianHolidays2026)
+    const isHolidayDate = !!holidayInfo
 
     if (!isCurrentMonth) {
       ctx.globalAlpha = 0.3
     }
 
-    if (isActiveDay) {
+    const dateStr = format(day, 'yyyy-MM-dd')
+    const dayDate = new Date(dateStr)
+
+    let isSelectedRange = false
+    let isRangeInterval = false
+    let isSingleCircle = false
+
+    annotations.forEach(ann => {
+      const annStart = new Date(ann.start)
+      if (ann.type === 'single') {
+        if (isSameDay(dayDate, annStart)) isSingleCircle = true
+      } else if (ann.type === 'range') {
+        const annEnd = new Date(ann.end)
+        const minDate = isAfter(annStart, annEnd) ? annEnd : annStart
+        const maxDate = isAfter(annStart, annEnd) ? annStart : annEnd
+        
+        if (isSameDay(dayDate, minDate) || isSameDay(dayDate, maxDate)) {
+          isSelectedRange = true
+        }
+        if (dayDate > minDate && dayDate < maxDate) {
+          isRangeInterval = true
+        }
+      }
+    })
+
+    if (draftRangeStart && isSameDay(dayDate, new Date(draftRangeStart))) {
+      isSelectedRange = true
+    }
+
+    if (isRangeInterval) {
+      ctx.fillStyle = tokens.calendarRange || 'rgba(142, 201, 255, 0.25)'
+      ctx.fillRect(x - colWidth / 2, y - rowHeight / 2, colWidth, rowHeight)
+    }
+
+    if (isSelectedRange) {
+      ctx.fillStyle = tokens.calendarSelected || 'rgba(82, 123, 180, 0.8)'
+      ctx.beginPath()
+      ctx.arc(x, y - 8, 30, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = '#ffffff'
+    } else if (isActiveDay && !isSelectedRange && !isRangeInterval) {
       ctx.fillStyle = accent
       ctx.beginPath()
       ctx.arc(x, y - 8, 30, 0, Math.PI * 2)
       ctx.fill()
       ctx.fillStyle = '#ffffff'
-    } else if (isTodayDate) {
+    } else if (isTodayDate && !isSelectedRange && !isRangeInterval) {
       ctx.fillStyle = accent
       ctx.beginPath()
       ctx.arc(x, y - 8, 24, 0, Math.PI * 2)
       ctx.fill()
       ctx.fillStyle = '#ffffff'
+    } else if (isSundayDate || isHolidayDate) {
+      ctx.fillStyle = holidayColor
     } else {
       ctx.fillStyle = textColor
     }
 
-    ctx.font = isActiveDay || isTodayDate ? 'bold 32px Manrope, sans-serif' : '28px Manrope, sans-serif'
+    ctx.font = isActiveDay || isTodayDate || isSelectedRange ? 'bold 32px Manrope, sans-serif' : '28px Manrope, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(format(day, 'd'), x, y - 8)
+
+    if (isSundayDate || isHolidayDate) {
+      ctx.font = isActiveDay || isTodayDate || isSelectedRange ? 'bold 20px Manrope, sans-serif' : '18px Manrope, sans-serif'
+      ctx.fillText(isHolidayDate ? '★' : '', x, y + 18)
+    }
+
+    if (isSingleCircle) {
+      ctx.strokeStyle = '#ff3b3b' // Red pen color
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      // Draw standard arc that looks like a quickly drawn red circle
+      ctx.arc(x, y - 8, 32, 0, Math.PI * 2)
+      ctx.stroke()
+    }
 
     const dayEvents = eventsArr.filter(e => {
       const eventDate = new Date(e.year, e.month - 1, e.day)
@@ -133,37 +262,98 @@ function createCalendarTexture(date, tokens, activeDay, eventsArr) {
   return texture
 }
 
-function CalendarPage({ texture, flipProgress, position = [0, 0, 0] }) {
-  const meshRef = useRef()
-  const geometryRef = useRef()
+function createPageFlipGeometry(width, height, segmentsX, segmentsY) {
+  const geometry = new THREE.PlaneGeometry(width, height, segmentsX, segmentsY)
+  const originalPositions = geometry.attributes.position.array.slice()
+  geometry.userData.originalPositions = originalPositions
+  return geometry
+}
 
+function CalendarPage({ frontTexture, backTexture, flipProgress, position = [0, 0, 0], direction = 1 }) {
+  const meshRef = useRef()
+  const groupRef = useRef()
+  
   const geometry = useMemo(() => {
-    return new THREE.PlaneGeometry(CALENDAR_WIDTH, CALENDAR_HEIGHT, SEGMENTS_X, SEGMENTS_Y)
+    return createPageFlipGeometry(CALENDAR_WIDTH, CALENDAR_HEIGHT, SEGMENTS_X, SEGMENTS_Y)
   }, [])
 
   useFrame(() => {
-    if (!meshRef.current || !geometryRef.current) return
-
-    const pos = geometryRef.current.attributes.position
-
+    if (!meshRef.current || !geometry.userData.originalPositions) return
+    
+    const pos = geometry.attributes.position
+    const original = geometry.userData.originalPositions
+    
+    const t = flipProgress
+    
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i)
-      const normalizedX = (x / CALENDAR_WIDTH) + 0.5
-
-      const curl = Math.sin(normalizedX * Math.PI) * flipProgress * 0.4
-      const lift = Math.sin(normalizedX * Math.PI * flipProgress) * 0.2
-
-      pos.setZ(i, curl)
-      pos.setY(i, pos.getY(i) + lift * 0.05)
+      const ox = original[i * 3]
+      const oy = original[i * 3 + 1]
+      const oz = original[i * 3 + 2]
+      
+      const normalizedX = (ox / (CALENDAR_WIDTH / 2) + 1) / 2
+      
+      let px = ox, py = oy, pz = oz
+      
+      if (direction > 0) {
+        if (t > 0) {
+          const curlStart = t * 0.5
+          
+          if (normalizedX > curlStart) {
+            const curlFactor = (normalizedX - curlStart) / (1 - curlStart)
+            const angle = curlFactor * Math.PI * (1 - t * 0.5)
+            
+            const curlAmount = Math.sin(angle) * 0.6
+            px = ox - curlAmount * 1.8 - (normalizedX - curlStart) * t * 0.8
+            pz = oz + curlAmount * 0.6 + t * 0.4
+            py = oy + Math.abs(Math.cos(angle)) * 0.4 * t + normalizedX * t * 0.3
+          } else {
+            px = ox - t * 0.3
+            pz = oz + t * 0.3
+            py = oy + t * 0.15
+          }
+        }
+      } else {
+        if (t > 0) {
+          const curlStart = 1 - t * 0.5
+          
+          if (normalizedX < curlStart) {
+            const curlFactor = (curlStart - normalizedX) / curlStart
+            const angle = curlFactor * Math.PI * (1 - t * 0.5)
+            
+            const curlAmount = Math.sin(angle) * 0.6
+            px = ox + curlAmount * 1.8 + (curlStart - normalizedX) * t * 0.8
+            pz = oz + curlAmount * 0.6 + t * 0.4
+            py = oy + Math.abs(Math.cos(angle)) * 0.4 * t + (1 - normalizedX) * t * 0.3
+          } else {
+            px = ox + t * 0.3
+            pz = oz + t * 0.3
+            py = oy + t * 0.15
+          }
+        }
+      }
+      
+      pos.setXYZ(i, px, py, pz)
     }
+    
     pos.needsUpdate = true
-    geometryRef.current.computeVertexNormals()
+    geometry.computeVertexNormals()
   })
 
+  const groupRotation = direction > 0 ? [0, 0, 0] : [0, Math.PI, 0]
+  
   return (
-    <mesh ref={meshRef} geometry={geometry} position={position}>
-      <meshStandardMaterial map={texture} side={THREE.DoubleSide} roughness={0.85} metalness={0.02} />
-    </mesh>
+    <group ref={groupRef} position={position} rotation={groupRotation}>
+      <mesh ref={meshRef} geometry={geometry}>
+        <meshStandardMaterial 
+          map={direction > 0 ? frontTexture : backTexture} 
+          side={THREE.DoubleSide} 
+          roughness={0.85} 
+          metalness={0.02}
+          transparent
+          opacity={1 - flipProgress}
+        />
+      </mesh>
+    </group>
   )
 }
 
@@ -176,11 +366,17 @@ function getDayFromUV(uv, date) {
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
 
-  const colWidth = 1 / 7
-  const rowHeight = (1312 - 200) / 1312
+  const pxX = uv.x * 1024
+  const pxY = (1 - uv.y) * 1312
 
-  const col = Math.floor(uv.x / colWidth)
-  const row = Math.floor((uv.y - (200 / 1312)) / rowHeight)
+  const yStart = 660
+  if (pxY < yStart || pxY > 1312) return null
+
+  const rowHeight = (1312 - yStart) / 6
+  const colWidth = 1024 / 7
+
+  const col = Math.floor(pxX / colWidth)
+  const row = Math.floor((pxY - yStart) / rowHeight)
 
   const index = row * 7 + col
 
@@ -198,13 +394,131 @@ function getDayFromUV(uv, date) {
   return null
 }
 
+function getGridPosFromDate(date, currentDate) {
+  const monthStart = startOfMonth(currentDate)
+  const monthEnd = endOfMonth(currentDate)
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
+  const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
+
+  const index = days.findIndex(d => isSameDay(d, date))
+  if (index === -1) return null
+
+  const col = index % 7
+  const row = Math.floor(index / 7)
+
+  const x = -CALENDAR_WIDTH / 2 + (col + 0.5) * (CALENDAR_WIDTH / 7)
+  const yTop = 2.1 - (200 / 1312 * 4.2)
+  const yRowHeight = (1112 / 1312 * 4.2) / 6
+  const y = yTop - (row + 0.5) * yRowHeight
+
+  return new THREE.Vector3(x, y, 0.05)
+}
+
+function CartoonyArrow({ startVec, endVec, color }) {
+  const curve = useMemo(() => {
+    if (!startVec || !endVec) return null
+    const mid = new THREE.Vector3().addVectors(startVec, endVec).multiplyScalar(0.5)
+    mid.z += 0.8
+    mid.y += 0.5
+    return new THREE.QuadraticBezierCurve3(startVec, mid, endVec)
+  }, [startVec, endVec])
+
+  const tubeGeo = useMemo(() => {
+    if (!curve) return null
+    return new THREE.TubeGeometry(curve, 20, 0.03, 8, false)
+  }, [curve])
+
+  const meshRef = useRef()
+  useFrame(() => {
+    if (meshRef.current && curve) {
+      const point = curve.getPoint(1)
+      const tangent = curve.getTangent(1).normalize()
+      meshRef.current.position.copy(point)
+      meshRef.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent)
+    }
+  })
+
+  if (!curve) return null
+
+  return (
+    <group>
+      <mesh geometry={tubeGeo}>
+        <meshStandardMaterial color={color || '#ff8800'} roughness={0.3} metalness={0.1} />
+      </mesh>
+      <mesh ref={meshRef}>
+        <coneGeometry args={[0.08, 0.2, 16]} />
+        <meshStandardMaterial color={color || '#ff8800'} roughness={0.3} />
+      </mesh>
+    </group>
+  )
+}
+
+function StickyNote3D({ text, onChange, position, onEnter }) {
+  return (
+    <group position={position}>
+      <mesh castShadow receiveShadow>
+        <planeGeometry args={[1.5, 1.5]} />
+        <meshStandardMaterial color="#fffacd" roughness={0.9} />
+      </mesh>
+      <Html transform position={[0, 0, 0.02]} distanceFactor={1.5} zIndexRange={[100, 0]}>
+        <div style={{
+            width: '180px',
+            height: '180px',
+            padding: '10px',
+            boxSizing: 'border-box'
+        }}>
+          <textarea
+            value={text}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.target.blur()
+                if (onEnter) onEnter()
+              }
+            }}
+            placeholder="Write your sticky note here..."
+            style={{
+              width: '100%',
+              height: '100%',
+              backgroundColor: 'transparent',
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              fontFamily: 'Manrope, sans-serif',
+              fontWeight: '600',
+              fontSize: '18px',
+              color: '#333'
+            }}
+          />
+        </div>
+      </Html>
+    </group>
+  )
+}
+
 export default function Calendar3D({ tokens }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [activeDay, setActiveDay] = useState(new Date().getDate())
   const [isFlipping, setIsFlipping] = useState(false)
+  const isFlippingRef = useRef(false)
+  const [flipDirection, setFlipDirection] = useState(1)
   const [flipProgress, setFlipProgress] = useState(0)
   const [eventsArr, setEventsArr] = useState(getEvents)
   const [hoveredDay, setHoveredDay] = useState(null)
+
+  // Unified Annotations State
+  const [annotations, setAnnotations] = useState(getAnnotations)
+  const [activeNoteId, setActiveNoteId] = useState(null)
+  
+  const [isRangeSelectionMode, setIsRangeSelectionMode] = useState(false)
+  const [draftRangeStart, setDraftRangeStart] = useState(null)
+  const [showHolidaysPanel, setShowHolidaysPanel] = useState(false)
+  const [displayedMonthOffset, setDisplayedMonthOffset] = useState(0)
+
+  const currentMonthHolidays = useMemo(() => {
+    return getHolidaysForMonth(currentDate.getMonth() + 1, currentDate.getFullYear(), indianHolidays2026)
+  }, [currentDate])
 
   const calendarMeshRef = useRef()
   const { raycaster, camera } = useThree()
@@ -213,22 +527,41 @@ export default function Calendar3D({ tokens }) {
     saveEvents(eventsArr)
   }, [eventsArr])
 
-  const calendarTexture = useMemo(() => {
-    return createCalendarTexture(currentDate, tokens, activeDay, eventsArr)
-  }, [currentDate, tokens, activeDay, eventsArr])
+  useEffect(() => {
+    saveAnnotations(annotations)
+  }, [annotations])
 
-  const prevTexture = useMemo(() => {
-    return createCalendarTexture(subMonths(currentDate, 1), tokens, 0, eventsArr)
-  }, [currentDate, tokens, eventsArr])
+  const [heroImage, setHeroImage] = useState(null)
+  useEffect(() => {
+    if (!tokens.heroImage) return
+    const img = new window.Image()
+    img.src = tokens.heroImage
+    img.onload = () => setHeroImage(img)
+  }, [tokens.heroImage])
+
+  const calendarTexture = useMemo(() => {
+    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset), tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage)
+  }, [currentDate, tokens, activeDay, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset])
+
+  const nextMonthTexture = useMemo(() => {
+    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset + 1), tokens, 0, eventsArr, annotations, draftRangeStart, heroImage)
+  }, [currentDate, tokens, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset])
+
+  const prevMonthTexture = useMemo(() => {
+    return createCalendarTexture(addMonths(currentDate, displayedMonthOffset - 1), tokens, 0, eventsArr, annotations, draftRangeStart, heroImage)
+  }, [currentDate, tokens, eventsArr, annotations, draftRangeStart, heroImage, displayedMonthOffset])
 
   const handleFlip = useCallback((direction) => {
-    if (isFlipping) return
+    if (isFlippingRef.current) return
 
+    isFlippingRef.current = true
+    setFlipDirection(direction)
+    setDisplayedMonthOffset(prev => prev + direction)
     setIsFlipping(true)
     setFlipProgress(0)
 
     const startTime = Date.now()
-    const duration = 800
+    const duration = 1000
 
     const animate = () => {
       const elapsed = Date.now() - startTime
@@ -241,16 +574,29 @@ export default function Calendar3D({ tokens }) {
         requestAnimationFrame(animate)
       } else {
         setCurrentDate(prev => direction > 0 ? addMonths(prev, 1) : subMonths(prev, 1))
+        setDisplayedMonthOffset(0)
         setFlipProgress(0)
         setIsFlipping(false)
+        isFlippingRef.current = false
       }
     }
 
     requestAnimationFrame(animate)
-  }, [isFlipping])
+  }, [])
 
   const handleCalendarClick = useCallback((e) => {
     e.stopPropagation()
+
+    if (activeNoteId) {
+      setActiveNoteId(null)
+    }
+
+    if (isRangeSelectionMode) return // In selection mode, ignore single clicks
+
+    // Close holidays panel when clicking elsewhere
+    if (showHolidaysPanel) {
+      setShowHolidaysPanel(false)
+    }
 
     const uv = e.uv
     if (!uv) return
@@ -267,7 +613,75 @@ export default function Calendar3D({ tokens }) {
     } else {
       setActiveDay(dayInfo.dayNum)
     }
-  }, [currentDate, handleFlip])
+  }, [currentDate, handleFlip, isRangeSelectionMode, activeNoteId, showHolidaysPanel])
+
+  const handleCalendarDoubleClick = useCallback((e) => {
+    e.stopPropagation()
+
+    const uv = e.uv
+    if (!uv) return
+
+    const dayInfo = getDayFromUV(uv, currentDate)
+    if (!dayInfo) return
+
+    const clickedDate = dayInfo.date
+    const clickedStr = format(clickedDate, 'yyyy-MM-dd')
+
+    // 1. Check if we clicked on an EXISTING annotation
+    let foundAnn = null
+    for (const ann of annotations) {
+      const startD = new Date(ann.start)
+      if (ann.type === 'single') {
+        if (isSameDay(clickedDate, startD)) foundAnn = ann
+      } else if (ann.type === 'range' && ann.end) {
+        const endD = new Date(ann.end)
+        const minDate = isAfter(startD, endD) ? endD : startD
+        const maxDate = isAfter(startD, endD) ? startD : endD
+        if (isSameDay(clickedDate, minDate) || isSameDay(clickedDate, maxDate) || (clickedDate > minDate && clickedDate < maxDate)) {
+          foundAnn = ann
+        }
+      }
+      if (foundAnn) break
+    }
+
+    if (foundAnn) {
+      setActiveNoteId(foundAnn.id)
+      setIsRangeSelectionMode(false)
+      setDraftRangeStart(null)
+      return
+    }
+
+    // 2. Draft Range process
+    if (isRangeSelectionMode) {
+      if (!draftRangeStart) {
+        setDraftRangeStart(clickedStr)
+      } else {
+        const newId = 'range-' + Date.now()
+        setAnnotations(prev => [...prev, {
+          id: newId,
+          type: 'range',
+          start: draftRangeStart,
+          end: clickedStr,
+          text: ''
+        }])
+        setDraftRangeStart(null)
+        setIsRangeSelectionMode(false)
+        setActiveNoteId(newId)
+      }
+      return
+    }
+
+    // 3. New Single Circle
+    const newId = 'single-' + Date.now()
+    setAnnotations(prev => [...prev, {
+      id: newId,
+      type: 'single',
+      start: clickedStr,
+      text: ''
+    }])
+    setActiveNoteId(newId)
+
+  }, [annotations, isRangeSelectionMode, draftRangeStart, currentDate])
 
   const handleCalendarHover = useCallback((e) => {
     e.stopPropagation()
@@ -293,26 +707,38 @@ export default function Calendar3D({ tokens }) {
     return new Date(currentDate.getFullYear(), currentDate.getMonth(), activeDay)
   }, [currentDate, activeDay])
 
+  const activeAnnotation = useMemo(() => annotations.find(a => a.id === activeNoteId), [annotations, activeNoteId])
+
+  const arrowTargetVec = useMemo(() => {
+    if (!activeAnnotation) return null
+    if (activeAnnotation.type === 'single') {
+       return getGridPosFromDate(new Date(activeAnnotation.start + 'T00:00:00'), currentDate)
+    } else {
+       const start = new Date(activeAnnotation.start)
+       const end = new Date(activeAnnotation.end)
+       const minDate = isAfter(start, end) ? end : start
+       return getGridPosFromDate(minDate, currentDate)
+    }
+  }, [activeAnnotation, currentDate])
+
   return (
     <group position={[0, 3.18, 0.5]}>
       {/* Navigation buttons - visible with background */}
       {/* Right arrow button (next month) */}
       <group position={[CALENDAR_WIDTH / 2 + 0.65, 0, 1.2]}>
         <mesh
-          onClick={() => handleFlip(1)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleFlip(1);
+          }}
           renderOrder={999}
         >
           <planeGeometry args={[0.7, 0.7]} />
           <meshStandardMaterial color={tokens.calendarAccent || '#4b78b6'} roughness={0.5} metalness={0.1} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
-        {/* Arrow shape */}
-        <mesh position={[0, 0, 0.01]} renderOrder={1000}>
-          <planeGeometry args={[0.35, 0.35]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0} side={THREE.DoubleSide} depthWrite={false} />
-        </mesh>
-        {/* Arrow triangle right */}
+        {/* Arrow triangle right - rotate to point right */}
         <mesh position={[0.05, 0, 0.02]} rotation={[0, 0, -Math.PI / 2]} renderOrder={1001}>
-          <planeGeometry args={[0.25, 0.25]} />
+          <coneGeometry args={[0.22, 0.35, 3]} />
           <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
       </group>
@@ -320,57 +746,43 @@ export default function Calendar3D({ tokens }) {
       {/* Left arrow button (prev month) */}
       <group position={[-CALENDAR_WIDTH / 2 - 0.65, 0, 1.2]}>
         <mesh
-          onClick={() => handleFlip(-1)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleFlip(-1);
+          }}
           renderOrder={999}
         >
           <planeGeometry args={[0.7, 0.7]} />
           <meshStandardMaterial color={tokens.calendarAccent || '#4b78b6'} roughness={0.5} metalness={0.1} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
-        {/* Arrow shape */}
-        <mesh position={[0, 0, 0.01]} renderOrder={1000}>
-          <planeGeometry args={[0.35, 0.35]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0} side={THREE.DoubleSide} depthWrite={false} />
-        </mesh>
-        {/* Arrow triangle left */}
+        {/* Arrow triangle left - rotate to point left */}
         <mesh position={[-0.05, 0, 0.02]} rotation={[0, 0, Math.PI / 2]} renderOrder={1001}>
-          <planeGeometry args={[0.25, 0.25]} />
+          <coneGeometry args={[0.22, 0.35, 3]} />
           <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0} side={THREE.DoubleSide} depthWrite={false} />
         </mesh>
       </group>
 
-      {/* Click areas for navigation */}
-      <mesh
-        position={[CALENDAR_WIDTH / 2, 0, 1.0]}
-        onClick={() => handleFlip(1)}
-        renderOrder={999}
-      >
-        <planeGeometry args={[CALENDAR_WIDTH / 2, CALENDAR_HEIGHT]} />
-        <meshStandardMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
-
-      <mesh
-        position={[-CALENDAR_WIDTH / 2, 0, 1.0]}
-        onClick={() => handleFlip(-1)}
-        renderOrder={999}
-      >
-        <planeGeometry args={[CALENDAR_WIDTH / 2, CALENDAR_HEIGHT]} />
-        <meshStandardMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
 
       {/* Stack of remaining pages */}
       {[0, -0.005, -0.01].map((z, i) => (
         <mesh key={`stack-${i}`} position={[0, 0, z]} renderOrder={100}>
           <planeGeometry args={[CALENDAR_WIDTH, CALENDAR_HEIGHT]} />
-          <meshStandardMaterial color={tokens.calendarBg || '#1a212c'} roughness={0.9} metalness={0.01} />
+          <meshStandardMaterial 
+            map={isFlipping ? (flipDirection > 0 ? nextMonthTexture : prevMonthTexture) : (flipDirection >= 0 ? nextMonthTexture : prevMonthTexture)}
+            roughness={0.9} 
+            metalness={0.01} 
+          />
         </mesh>
       ))}
 
-      {/* Current page with flip animation */}
+      {/* Outgoing page that curls away */}
       {isFlipping && (
         <CalendarPage
-          texture={prevTexture}
+          frontTexture={calendarTexture}
+          backTexture={flipDirection > 0 ? nextMonthTexture : prevMonthTexture}
           flipProgress={flipProgress}
           position={[0, 0, 0.05]}
+          direction={flipDirection}
         />
       )}
 
@@ -380,17 +792,162 @@ export default function Calendar3D({ tokens }) {
         position={[0, 0, 0.02]}
         renderOrder={101}
         onClick={handleCalendarClick}
+        onDoubleClick={handleCalendarDoubleClick}
         onPointerMove={handleCalendarHover}
       >
         <planeGeometry args={[CALENDAR_WIDTH, CALENDAR_HEIGHT]} />
-        <meshStandardMaterial map={calendarTexture} roughness={0.85} metalness={0.02} side={THREE.DoubleSide} />
+        <meshStandardMaterial 
+          map={isFlipping ? (flipDirection > 0 ? nextMonthTexture : prevMonthTexture) : (flipDirection >= 0 ? nextMonthTexture : prevMonthTexture)} 
+          roughness={0.85} 
+          metalness={0.02} 
+          side={THREE.DoubleSide} 
+        />
       </mesh>
+
+      {/* Page curl shadow effect */}
+      {isFlipping && (
+        <mesh position={[flipDirection > 0 ? CALENDAR_WIDTH / 2 - 0.3 : -CALENDAR_WIDTH / 2 + 0.3, -CALENDAR_HEIGHT / 2 + 0.3, 0.03]} renderOrder={102}>
+          <planeGeometry args={[0.8, 1.2]} />
+          <meshStandardMaterial color="#000000" transparent opacity={0.4 * flipProgress} roughness={1} />
+        </mesh>
+      )}
 
       {/* Page shadow */}
       <mesh position={[0, -CALENDAR_HEIGHT / 2 - 0.1, 1.0]}>
         <planeGeometry args={[CALENDAR_WIDTH * 0.8, 0.08]} />
         <meshStandardMaterial color="#000000" transparent opacity={0.3} roughness={1} />
       </mesh>
+
+      {/* Primary Action Button - Left side top */}
+      <group position={[-CALENDAR_WIDTH / 2 - 1.2, 1.6, 1.0]}>
+        <mesh
+          onClick={(e) => {
+            e.stopPropagation()
+            if (activeNoteId) {
+              setAnnotations(prev => prev.filter(a => a.id !== activeNoteId))
+              setActiveNoteId(null)
+            } else if (!isRangeSelectionMode) {
+              setIsRangeSelectionMode(true)
+              setDraftRangeStart(null)
+            } else {
+              setIsRangeSelectionMode(false)
+              setDraftRangeStart(null)
+            }
+          }}
+          renderOrder={1002}
+        >
+          <planeGeometry args={[1.9, 0.5]} />
+          <meshStandardMaterial 
+            color={activeNoteId ? '#f44336' : (isRangeSelectionMode ? '#527bb4' : (tokens.chipColor || tokens.calendarAccent || '#4b78b6'))} 
+            roughness={0.5} 
+          />
+        </mesh>
+        <Html transform position={[0, 0, 0.02]} distanceFactor={1.5} pointerEvents="none">
+          <div style={{
+            color: '#fff',
+            fontFamily: 'Manrope, sans-serif',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            width: '200px',
+            userSelect: 'none'
+          }}>
+            {activeNoteId ? 'Delete Note' : 
+             !isRangeSelectionMode ? 'Select Dates Range' : 
+             !draftRangeStart ? 'Double click start date' : 
+             'Double click end date'}
+          </div>
+        </Html>
+      </group>
+
+      {/* Interactive Sticky Note overlay (Visible when selection is complete) */}
+      {activeAnnotation && (
+        <group>
+          {/* Note positioned clearly to the right of the calendar to avoid left/right arrows */}
+          <StickyNote3D 
+            text={activeAnnotation.text} 
+            onChange={(val) => setAnnotations(prev => prev.map(a => a.id === activeNoteId ? { ...a, text: val } : a))} 
+            onEnter={() => setActiveNoteId(null)}
+            position={[CALENDAR_WIDTH / 2 + 2.0, 0, 0.5]} 
+          />
+          {/* Cartoony Arrow connecting sticky note to the selected start date */}
+          {arrowTargetVec && (
+             <CartoonyArrow 
+               startVec={new THREE.Vector3(CALENDAR_WIDTH / 2 + 2.0 - 0.75, 0, 0.5)} 
+               endVec={arrowTargetVec} 
+               color={activeAnnotation.type === 'single' ? "#ff3b3b" : "#ff8800"}
+             />
+          )}
+        </group>
+      )}
+
+      {/* Holidays Button + Dropdown - Right side top */}
+      <group position={[CALENDAR_WIDTH / 2 + 1.6, 1.6, 1.0]}>
+        <mesh
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowHolidaysPanel(!showHolidaysPanel)
+          }}
+          renderOrder={1003}
+        >
+          <planeGeometry args={[1.5, 0.5]} />
+          <meshStandardMaterial 
+            color={showHolidaysPanel ? (tokens.calendarAccent || '#4b78b6') : (tokens.chipColor || tokens.calendarAccent || '#4b78b6')} 
+            roughness={0.5} 
+          />
+        </mesh>
+        <Html transform position={[0, 0, 0.01]} distanceFactor={1.5} pointerEvents="none">
+          <div style={{
+            color: '#fff',
+            fontFamily: 'Manrope, sans-serif',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            width: '170px',
+            userSelect: 'none'
+          }}>
+            Holidays {showHolidaysPanel ? '▼' : '▶'}
+          </div>
+        </Html>
+
+        {/* Dropdown Panel - expands downward from button */}
+        {showHolidaysPanel && (
+          <group position={[0, -1.6, 0.05]}>
+            <mesh>
+              <planeGeometry args={[2.4, 2.2]} />
+              <meshStandardMaterial color={tokens.calendarBg || '#1a212c'} roughness={0.9} transparent opacity={0.95} />
+            </mesh>
+            <Html transform position={[0, 0, 0.01]} distanceFactor={1.5} style={{ width: '260px', pointerEvents: 'none' }}>
+              <div style={{
+                padding: '20px',
+                fontFamily: 'Manrope, sans-serif',
+                color: tokens.calendarText || '#ebf2fb',
+                fontSize: '22px',
+                lineHeight: '1.5'
+              }}>
+                <div style={{ fontWeight: 'bold', fontSize: '26px', marginBottom: '16px', borderBottom: `3px solid ${tokens.calendarAccent}`, paddingBottom: '8px' }}>
+                  Holidays
+                </div>
+                {currentMonthHolidays.length === 0 ? (
+                  <div style={{ opacity: 0.6, fontStyle: 'italic', fontSize: '20px' }}>No holidays this month</div>
+                ) : (
+                  currentMonthHolidays.map((h, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center' }}>
+                      <span style={{ color: '#ff4444', fontWeight: '900', fontSize: '26px' }}>{h.date.getDate()}</span>
+                      <span style={{ flex: 1, marginLeft: '14px', fontSize: '22px', fontWeight: '600' }}>{h.name}</span>
+                    </div>
+                  ))
+                )}
+                <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.3)', fontSize: '16px', opacity: 0.85 }}>
+                  ★ National Holiday<br/>
+                  ✦ Sunday
+                </div>
+              </div>
+            </Html>
+          </group>
+        )}
+      </group>
+
     </group>
   )
 }
